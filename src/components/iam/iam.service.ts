@@ -1,7 +1,8 @@
 import { DolphServiceHandler } from '@dolphjs/dolph/classes';
 import { ConflictException, Dolph, NotFoundException, UnauthorizedException } from '@dolphjs/dolph/common';
 import { DService } from '@dolphjs/dolph/decorators';
-import { compareHashedString } from '@dolphjs/dolph/utilities';
+import { compareHashedString, logger } from '@dolphjs/dolph/utilities';
+import { EmailService } from '../../shared/email';
 import { LoginDto, RegisterDto } from './iam.dto';
 import { TokenService } from './token.service';
 import { UserService } from './user.service';
@@ -16,6 +17,7 @@ export class IamService extends DolphServiceHandler<Dolph> {
     constructor(
         private userService: UserService,
         private tokenService: TokenService,
+        private emailService: EmailService,
     ) {
         super('iamService');
     }
@@ -27,6 +29,10 @@ export class IamService extends DolphServiceHandler<Dolph> {
         const user = await this.userService.create(dto);
         const accessToken = this.tokenService.signAccessToken(user);
         const refreshToken = await this.tokenService.issueRefreshToken(user, userAgent);
+
+        this.emailService
+            .sendTemplate('welcome', { firstName: user.firstName }, { to: user.email, subject: 'Welcome to DolphStore' })
+            .catch((err) => logger.error(`Failed to send welcome email to ${user.email}: ${err.message}`));
 
         return { user: this.userService.toSafeUser(user), accessToken, refreshToken };
     }

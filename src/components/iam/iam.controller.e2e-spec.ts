@@ -2,6 +2,7 @@ import { createTestingApp, TestingApp } from '@dolphjs/testing';
 import { DataSource } from 'typeorm';
 import request from 'supertest';
 import { seedSqliteDataSource } from '../../../tests/utils/sqlite-datasource';
+import { EmailService } from '../../shared/email';
 import { IamComponent } from './iam.component';
 import { RefreshToken } from './refresh-token.entity';
 import { User } from './user.entity';
@@ -19,7 +20,15 @@ describe('IamController (e2e)', () => {
     };
 
     beforeAll(async () => {
-        app = await createTestingApp({ components: [IamComponent] });
+        const mockEmailService = {
+            sendTemplate: jest.fn().mockResolvedValue({ id: 'em_mock', status: 'queued' }),
+            send: jest.fn().mockResolvedValue({ id: 'em_mock', status: 'queued' }),
+        } as unknown as EmailService;
+
+        app = await createTestingApp({
+            components: [IamComponent],
+            overrides: [{ service: EmailService, useValue: mockEmailService }],
+        });
         // Constructing DolphFactory above ran autoInitTypeOrm against
         // dolph_config.yaml's (real Postgres) config — seeding here
         // afterwards replaces the global DataSource with sqlite before any

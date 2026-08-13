@@ -1,5 +1,6 @@
 import { DataSource } from 'typeorm';
 import { seedSqliteDataSource } from '../../../tests/utils/sqlite-datasource';
+import { EmailService } from '../../shared/email';
 import { RegisterDto } from './iam.dto';
 import { IamService } from './iam.service';
 import { RefreshToken } from './refresh-token.entity';
@@ -10,6 +11,7 @@ import { UserService } from './user.service';
 describe('IamService', () => {
     let dataSource: DataSource;
     let iamService: IamService;
+    let emailService: { sendTemplate: jest.Mock; send: jest.Mock };
 
     const credentials: RegisterDto = {
         email: 'orchestrator@dolphstore.test',
@@ -21,20 +23,41 @@ describe('IamService', () => {
 
     beforeAll(async () => {
         dataSource = await seedSqliteDataSource([User, RefreshToken]);
-        iamService = new IamService(new UserService(), new TokenService());
+    });
+
+    beforeEach(() => {
+        emailService = {
+            sendTemplate: jest.fn().mockResolvedValue({ id: 'em_mock', status: 'queued' }),
+            send: jest.fn().mockResolvedValue({ id: 'em_mock', status: 'queued' }),
+        };
+        iamService = new IamService(new UserService(), new TokenService(), emailService as unknown as EmailService);
     });
 
     afterAll(async () => {
         await dataSource.destroy();
     });
 
-    it('registers a new user and returns tokens', async () => {
+    it('registers a new user, returns tokens, and sends a welcome email', async () => {
         const result = await iamService.register(credentials, 'jest');
 
         expect(result.user.email).toBe(credentials.email);
         expect((result.user as any).password).toBeUndefined();
         expect(result.accessToken).toBeDefined();
         expect(result.refreshToken).toBeDefined();
+
+        expect(emailService.sendTemplate).toHaveBeenCalledWith(
+            'welcome',
+            { firstName: credentials.firstName },
+            { to: credentials.email, subject: 'Welcome to DolphStore' },
+        );
+    });
+
+    it('still registers the user when the welcome email fails to send', async () => {
+        emailService.sendTemplate.mockRejectedValueOnce(new Error('provider unreachable'));
+
+        const result = await iamService.register({ ...credentials, email: 'email-failure@dolphstore.test' }, 'jest');
+
+        expect(result.user.email).toBe('email-failure@dolphstore.test');
     });
 
     it('rejects registering the same email twice', async () => {

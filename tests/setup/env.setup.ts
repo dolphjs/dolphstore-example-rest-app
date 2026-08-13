@@ -12,3 +12,6 @@ process.env.SQL_HOST = 'localhost';
 process.env.SQL_USER = 'test';
 process.env.SQL_PASSWORD = 'test';
 process.env.SQL_DATABASE = 'test';
+process.env.EMAIL_PROVIDER = 'sendbyte';
+process.env.EMAIL_FROM = 'DolphStore <no-reply@dolphstore.test>';
+process.env.SENDBYTE_API_KEY = 'sk_test_dummy_key_for_tests';

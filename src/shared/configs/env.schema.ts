@@ -1,6 +1,5 @@
 import Joi from 'joi';
 
-
 export const envSchema = Joi.object({
     NODE_ENV: Joi.string().valid('development', 'test', 'staging', 'production').default('development'),
     PORT: Joi.number().port().default(3300),
@@ -21,6 +20,12 @@ export const envSchema = Joi.object({
     SQL_USER: Joi.string().required(),
     SQL_PASSWORD: Joi.string().required(),
     SQL_DATABASE: Joi.string().required(),
+
+    EMAIL_PROVIDER: Joi.string().valid('sendbyte').default('sendbyte'),
+    EMAIL_FROM: Joi.string().required(),
+    SENDBYTE_API_KEY: Joi.string()
+        .pattern(/^sk_(test|live)_/)
+        .required(),
 
     PAYSTACK_SECRET_KEY: Joi.string().allow('').optional(),
     PAYSTACK_PUBLIC_KEY: Joi.string().allow('').optional(),
@@ -43,6 +48,9 @@ export type EnvVars = {
     SQL_USER: string;
     SQL_PASSWORD: string;
     SQL_DATABASE: string;
+    EMAIL_PROVIDER: 'sendbyte';
+    EMAIL_FROM: string;
+    SENDBYTE_API_KEY: string;
     PAYSTACK_SECRET_KEY?: string;
     PAYSTACK_PUBLIC_KEY?: string;
     FLUTTERWAVE_SECRET_KEY?: string;

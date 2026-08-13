@@ -8,6 +8,7 @@ A real estate REST API built with [DolphJS](https://github.com/dolphjs/dolph), T
 - **Database:** PostgreSQL via TypeORM
 - **Validation:** [Joi](https://joi.dev) for environment config, [class-validator](https://github.com/typestack/class-validator) + [class-transformer](https://github.com/typestack/class-transformer) for request DTOs
 - **Auth:** JWT access + refresh tokens, rotated and revocable per-device (IAM module)
+- **Email:** [MJML](https://mjml.io) templates rendered with Handlebars, sent through [Sendbyte](https://docs.sendbyte.africa) behind a swappable `EmailProvider` interface
 - **Payments:** Paystack and Flutterwave — coming in the payments module
 
 ## Getting Started
@@ -140,12 +141,29 @@ Passwords are hashed with bcrypt (`@dolphjs/dolph`'s `hashString`/`compareHashed
 
 Refresh tokens are rotated on every use and tracked per-device in the `refresh_tokens` table: each row's `id` doubles as the JWT's `jti` claim, and only a bcrypt hash of the signed token is stored — see `TokenService`.
 
-`IamService` is the module's upper-level service (see "Services" above); `UserService` and `TokenService` are the lower-level services it orchestrates.
+`IamService` is the module's upper-level service (see "Services" above); `UserService`, `TokenService`, and `EmailService` are the lower-level services it orchestrates. Registration sends a welcome email best-effort — a delivery failure is logged, not thrown, so a provider outage never blocks account creation.
+
+## Email (`src/shared/email`)
+
+Application code depends on `EmailProvider` (`send(message): Promise<EmailSendResult>`), never on a specific vendor. `SendbyteEmailProvider` is the only implementation today; swapping providers means writing a new class against the same interface and pointing `email-provider.factory.ts` at it via `EMAIL_PROVIDER`; nothing above `EmailService` changes.
+
+```ts
+await this.emailService.sendTemplate(
+  'welcome',
+  { firstName: user.firstName },
+  { to: user.email, subject: 'Welcome to DolphStore' },
+);
+```
+
+`sendTemplate` renders an `.mjml` file from `src/shared/email/templates` with Handlebars variables, compiling MJML once per template (cached) so repeated sends only re-run the cheap Handlebars substitution. Add a template by dropping a `.mjml` file in that folder and referencing its name.
+
+`SendByteError` is never allowed to leak past the provider — it's caught and rewrapped as `EmailSendException`, so nothing outside `src/shared/email` needs to know which vendor is in use.
 
 ## Roadmap
 
 - [x] Foundation: env validation, DTO validation convention, TypeORM/Postgres wiring, shared entity/enum/interface scaffolding
 - [x] IAM: registration, login, JWT access + refresh token rotation
+- [x] Email: MJML + Handlebars templates, Sendbyte provider behind a swappable interface
 - [ ] Properties/Listings: CRUD, media, search & filtering
 - [ ] Reviews/Ratings
 - [ ] Payments: Paystack + Flutterwave

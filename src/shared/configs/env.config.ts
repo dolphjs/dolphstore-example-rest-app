@@ -39,6 +39,11 @@ export const env = Object.freeze({
         password: validatedVars.SQL_PASSWORD,
         name: validatedVars.SQL_DATABASE,
     },
+    email: {
+        provider: validatedVars.EMAIL_PROVIDER,
+        from: validatedVars.EMAIL_FROM,
+        sendbyteApiKey: validatedVars.SENDBYTE_API_KEY,
+    },
     payments: {
         paystack: {
             secretKey: validatedVars.PAYSTACK_SECRET_KEY,
