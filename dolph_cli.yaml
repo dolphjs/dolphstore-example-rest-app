@@ -1,0 +1,5 @@
+# this is an auto-generated file, please do not edit manually
+language: ts
+database: postgresql
+routing: spring
+api: rest

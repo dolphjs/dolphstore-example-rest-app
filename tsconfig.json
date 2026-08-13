@@ -1,0 +1,74 @@
+{
+  "compilerOptions": {
+    "allowJs": false,
+    "baseUrl": "src",
+    "declaration": false,
+    "emitDecoratorMetadata": true,
+    "esModuleInterop": true,
+    "experimentalDecorators": true,
+    "forceConsistentCasingInFileNames": true,
+    "module": "commonjs",
+    "outDir": "app",
+    "paths": {
+      "@/*": [
+        "*"
+      ],
+      "@/components/*": [
+        "components/*"
+      ],
+      "@/configs/*": [
+        "shared/configs/*"
+      ],
+      "@/constants/*": [
+        "shared/constants/*"
+      ],
+      "@/decorators/*": [
+        "shared/decorators/*"
+      ],
+      "@/helpers*": [
+        "shared/helpers/*"
+      ],
+      "@/interfaces/*": [
+        "shared/interfaces/*"
+      ],
+      "@/middlewares/*": [
+        "shared/middlewares/*"
+      ],
+      "@/services/*": [
+        "shared/services/*"
+      ],
+      "@/shared/*": [
+        "shared/*"
+      ],
+      "@/shields/*": [
+        "shared/shields/*"
+      ],
+      "@/utils/*": [
+        "shared/utils/*"
+      ],
+      "@/validations/*": [
+        "shared/validations/*"
+      ]
+    },
+    "pretty": true,
+    "resolveJsonModule": true,
+    "sourceMap": false,
+    "strictFunctionTypes": false,
+    "target": "ES2022",
+    "useUnknownInCatchVariables": false
+  },
+  "exclude": [
+    "node_modules",
+    "**/*.spec.ts",
+    "**/*.e2e-spec.ts"
+  ],
+  "include": [
+    "src/",
+    ".env"
+  ],
+  "ts-node": {
+    "compilerOptions": {
+      "module": "CommonJS"
+    }
+  }
+}

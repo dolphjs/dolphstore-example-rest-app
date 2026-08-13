@@ -1,0 +1,71 @@
+{
+  "exclude": [
+    "\\.spec\\.ts$",
+    "\\.e2e-spec\\.ts$"
+  ],
+  "jsc": {
+    "baseUrl": "src",
+    "externalHelpers": false,
+    "keepClassNames": true,
+    "loose": false,
+    "minify": {
+      "compress": false,
+      "mangle": false
+    },
+    "parser": {
+      "decorators": true,
+      "dynamicImport": true,
+      "syntax": "typescript",
+      "tsx": false
+    },
+    "paths": {
+      "@/*": [
+        "*"
+      ],
+      "@/components/*": [
+        "components/*"
+      ],
+      "@/configs/*": [
+        "shared/configs/*"
+      ],
+      "@/constants/*": [
+        "shared/constants/*"
+      ],
+      "@/decorators/*": [
+        "shared/decorators/*"
+      ],
+      "@/helpers*": [
+        "shared/helpers/*"
+      ],
+      "@/interfaces/*": [
+        "shared/interfaces/*"
+      ],
+      "@/middlewares/*": [
+        "shared/middlewares/*"
+      ],
+      "@/services/*": [
+        "shared/services/*"
+      ],
+      "@/shared/*": [
+        "shared/*"
+      ],
+      "@/shields/*": [
+        "shared/shields/*"
+      ],
+      "@/utils/*": [
+        "shared/utils/*"
+      ],
+      "@/validations/*": [
+        "shared/validations/*"
+      ]
+    },
+    "target": "es2022",
+    "transform": {
+      "decoratorMetadata": true,
+      "legacyDecorator": true
+    }
+  },
+  "module": {
+    "type": "commonjs"
+  }
+}

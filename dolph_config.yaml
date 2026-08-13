@@ -1,0 +1,28 @@
+port: 3300
+env: development
+jsonLimit: 2mb
+routing:
+  base: '/v1'
+  globalFilter: true
+middlewares:
+  cors:
+    activate: true
+    origin: '*'
+database:
+  typeorm:
+    options:
+      type: postgres
+      host: sensitive
+      port: 5432
+      username: sensitive
+      password: sensitive
+      # Keep this in sync with SQL_DATABASE in .env — dolph_config.yaml has
+      # no generic env-interpolation, only the `sensitive` masking above for
+      # host/username/password (see docs/techniques/database/typeorm).
+      database: dolphstore
+      synchronize: false
+      logging: false
+      entities:
+        - src/**/*.entity.ts
+      migrations:
+        - src/database/migrations/*.ts
