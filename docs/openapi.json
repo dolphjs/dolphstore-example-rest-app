@@ -12,7 +12,8 @@
   "tags": [
     { "name": "Auth", "description": "Registration, login, and session management" },
     { "name": "Properties", "description": "Property listings and their images" },
-    { "name": "Reviews", "description": "Property reviews and ratings" }
+    { "name": "Reviews", "description": "Property reviews and ratings" },
+    { "name": "Payments", "description": "Featured-listing payments via a pluggable payment gateway (Paystack)" }
   ],
   "paths": {
     "/properties": {
@@ -282,6 +283,42 @@
         }
       }
     },
+    "/properties/{id}/feature": {
+      "post": {
+        "tags": ["Payments"],
+        "summary": "Initiate a payment to feature a property listing (owning agent or admin only)",
+        "operationId": "initiateFeaturePayment",
+        "security": [{ "bearerAuth": [] }],
+        "description": "Creates a PENDING payment and returns a hosted checkout URL from the configured payment gateway. The listing becomes featured once the gateway confirms payment via webhook.",
+        "parameters": [{ "$ref": "#/components/parameters/PropertyIdPathParam" }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/InitiateFeaturePaymentDto" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "Payment initiated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessEnvelope" },
+                    { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/Payment" } } }
+                  ]
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/ValidationError" },
+          "401": { "$ref": "#/components/responses/Error" },
+          "403": {
+            "description": "Not the owning agent and not an admin",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+          },
+          "404": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
     "/properties/{id}/reviews": {
       "get": {
         "tags": ["Reviews"],
@@ -410,6 +447,140 @@
             "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
           },
           "404": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/payments/mine": {
+      "get": {
+        "tags": ["Payments"],
+        "summary": "List the current agent's own payments",
+        "operationId": "myPayments",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/PageParam" },
+          { "$ref": "#/components/parameters/LimitParam" },
+          { "$ref": "#/components/parameters/OrderParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated payments owned by the caller",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessEnvelope" },
+                    { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/PaginatedPayments" } } }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/payments/{reference}": {
+      "get": {
+        "tags": ["Payments"],
+        "summary": "Get a payment by its reference (owning agent or admin only)",
+        "operationId": "getPaymentByReference",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/PaymentReferencePathParam" }],
+        "responses": {
+          "200": {
+            "description": "The payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessEnvelope" },
+                    { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/Payment" } } }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Error" },
+          "403": {
+            "description": "Not the owning agent and not an admin",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+          },
+          "404": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/payments/{id}/refund": {
+      "post": {
+        "tags": ["Payments"],
+        "summary": "Refund a paid payment and un-feature the property (admin only)",
+        "operationId": "refundPayment",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/PaymentIdPathParam" }],
+        "requestBody": {
+          "required": false,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RefundPaymentDto" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "Refunded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessEnvelope" },
+                    { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/Payment" } } }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Error" },
+          "403": {
+            "description": "Not an admin, or the payment is not currently PAID",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+          },
+          "404": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/payments/webhooks/paystack": {
+      "post": {
+        "tags": ["Payments"],
+        "summary": "Paystack webhook — confirms payment and features the listing",
+        "operationId": "paystackWebhook",
+        "security": [],
+        "description": "Verifies the `x-paystack-signature` header (HMAC-SHA512 over the raw request body) before trusting the payload, then re-verifies the transaction directly against Paystack's API rather than trusting the webhook body's own status field. Idempotent — re-delivery of an already-processed event is a no-op.",
+        "parameters": [
+          {
+            "name": "x-paystack-signature",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "HMAC-SHA512 of the raw request body, keyed with the Paystack secret key."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Acknowledged",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessEnvelope" },
+                    { "type": "object", "properties": { "data": { "type": "object", "properties": { "received": { "type": "boolean", "example": true } } } } }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing raw request body (interim state pending an `@dolphjs/dolph` publish — see README)",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+          },
+          "401": {
+            "description": "Invalid or missing signature",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+          }
         }
       }
     },
@@ -730,7 +901,9 @@
       "LimitParam": { "name": "limit", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 100, "default": 20 } },
       "OrderParam": { "name": "order", "in": "query", "schema": { "type": "string", "enum": ["ASC", "DESC"], "default": "DESC" } },
       "PropertyIdPathParam": { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
-      "ReviewIdPathParam": { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+      "ReviewIdPathParam": { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+      "PaymentIdPathParam": { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+      "PaymentReferencePathParam": { "name": "reference", "in": "path", "required": true, "schema": { "type": "string" } }
     },
     "responses": {
       "Error": {
@@ -954,7 +1127,14 @@
           "agentId": { "type": "string", "format": "uuid" },
           "images": { "type": "array", "items": { "$ref": "#/components/schemas/PropertyImage" } },
           "averageRating": { "type": "number", "description": "Computed from reviews on read, not stored. 0 with no reviews." },
-          "reviewCount": { "type": "integer" }
+          "reviewCount": { "type": "integer" },
+          "featuredUntil": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Set by a paid feature payment; the listing sorts first in search results while this is in the future."
+          },
+          "isFeatured": { "type": "boolean", "description": "Derived from featuredUntil — true while it's still in the future." }
         }
       },
       "PaginatedProperties": {
@@ -999,6 +1179,49 @@
         "type": "object",
         "properties": {
           "data": { "type": "array", "items": { "$ref": "#/components/schemas/Review" } },
+          "total": { "type": "integer" },
+          "page": { "type": "integer" },
+          "limit": { "type": "integer" }
+        }
+      },
+      "InitiateFeaturePaymentDto": {
+        "type": "object",
+        "required": ["durationDays"],
+        "properties": {
+          "durationDays": { "type": "integer", "minimum": 1, "maximum": 90, "description": "Amount charged is durationDays x the daily feature rate." }
+        }
+      },
+      "RefundPaymentDto": {
+        "type": "object",
+        "properties": {
+          "reason": { "type": "string", "maxLength": 500 }
+        }
+      },
+      "Payment": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" },
+          "deletedAt": { "type": "string", "format": "date-time", "nullable": true },
+          "propertyId": { "type": "string", "format": "uuid" },
+          "agentId": { "type": "string", "format": "uuid" },
+          "reference": { "type": "string", "description": "Our own idempotency key, sent to the gateway as its transaction reference." },
+          "providerReference": { "type": "string", "nullable": true, "description": "The gateway's own transaction id, set once verified." },
+          "amount": { "type": "integer", "description": "In the smallest currency unit (kobo for NGN)." },
+          "currency": { "type": "string", "example": "NGN" },
+          "featureDurationDays": { "type": "integer" },
+          "status": { "type": "string", "enum": ["pending", "paid", "failed", "refunded"] },
+          "checkoutUrl": { "type": "string", "format": "uri", "nullable": true },
+          "paidAt": { "type": "string", "format": "date-time", "nullable": true },
+          "refundedAt": { "type": "string", "format": "date-time", "nullable": true },
+          "refundReason": { "type": "string", "nullable": true }
+        }
+      },
+      "PaginatedPayments": {
+        "type": "object",
+        "properties": {
+          "data": { "type": "array", "items": { "$ref": "#/components/schemas/Payment" } },
           "total": { "type": "integer" },
           "page": { "type": "integer" },
           "limit": { "type": "integer" }

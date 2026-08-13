@@ -51,15 +51,8 @@ export const env = Object.freeze({
         cloudinaryApiSecret: validatedVars.CLOUDINARY_API_SECRET,
     },
     payments: {
-        paystack: {
-            secretKey: validatedVars.PAYSTACK_SECRET_KEY,
-            publicKey: validatedVars.PAYSTACK_PUBLIC_KEY,
-        },
-        flutterwave: {
-            secretKey: validatedVars.FLUTTERWAVE_SECRET_KEY,
-            publicKey: validatedVars.FLUTTERWAVE_PUBLIC_KEY,
-            encryptionKey: validatedVars.FLUTTERWAVE_ENCRYPTION_KEY,
-        },
+        provider: validatedVars.PAYMENT_PROVIDER,
+        paystackSecretKey: validatedVars.PAYSTACK_SECRET_KEY,
     },
 });
 

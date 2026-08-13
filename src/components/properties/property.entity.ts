@@ -64,6 +64,10 @@ export class Property extends AbstractEntity {
     @JoinColumn({ name: 'agentId' })
     agent!: User;
 
+    @Index()
+    @Column({ nullable: true })
+    featuredUntil!: Date | null;
+
     @OneToMany(() => PropertyImage, (image) => image.property)
     images!: PropertyImage[];
 }

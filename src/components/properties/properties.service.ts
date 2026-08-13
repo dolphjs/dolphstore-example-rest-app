@@ -10,7 +10,9 @@ import { Property } from './property.entity';
 import { ListingStatus } from './property.enums';
 import { PropertyService } from './property.service';
 
-export type PropertyWithRating = Property & RatingAggregate;
+export type PropertyResponse = Property & RatingAggregate & { isFeatured: boolean };
+
+const isFeatured = (property: Property): boolean => !!property.featuredUntil && property.featuredUntil.getTime() > Date.now();
 
 @DService()
 export class PropertiesService extends DolphServiceHandler<Dolph> {
@@ -31,14 +33,14 @@ export class PropertiesService extends DolphServiceHandler<Dolph> {
         return { ...result, data: await this.withRatings(result.data) };
     }
 
-    async findPublished(id: string): Promise<PropertyWithRating> {
+    async findPublished(id: string): Promise<PropertyResponse> {
         const property = await this.propertyService.findById(id);
         if (!property || property.status !== ListingStatus.PUBLISHED) {
             throw new NotFoundException('property not found');
         }
 
         const aggregate = await this.reviewService.getAggregateForProperty(id);
-        return { ...property, ...aggregate };
+        return { ...property, ...aggregate, isFeatured: isFeatured(property) };
     }
 
     async findMine(requester: Requester, query: SearchPropertiesDto) {
@@ -75,11 +77,12 @@ export class PropertiesService extends DolphServiceHandler<Dolph> {
         await this.propertyImageService.remove(imageId);
     }
 
-    private async withRatings(properties: Property[]): Promise<PropertyWithRating[]> {
+    private async withRatings(properties: Property[]): Promise<PropertyResponse[]> {
         const aggregates = await this.reviewService.getAggregatesForProperties(properties.map((p) => p.id));
         return properties.map((property) => ({
             ...property,
             ...(aggregates.get(property.id) ?? { averageRating: 0, reviewCount: 0 }),
+            isFeatured: isFeatured(property),
         }));
     }
 

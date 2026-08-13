@@ -19,3 +19,5 @@ process.env.IMAGE_STORAGE_PROVIDER = 'cloudinary';
 process.env.CLOUDINARY_CLOUD_NAME = 'test-cloud';
 process.env.CLOUDINARY_API_KEY = 'test-api-key';
 process.env.CLOUDINARY_API_SECRET = 'test-api-secret';
+process.env.PAYMENT_PROVIDER = 'paystack';
+process.env.PAYSTACK_SECRET_KEY = 'sk_test_dummy_key_for_tests';
