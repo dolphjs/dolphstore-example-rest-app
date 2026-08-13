@@ -13,10 +13,8 @@ import { User } from '../iam/user.entity';
 import { UserService } from '../iam/user.service';
 import { PropertyImage } from '../properties/property-image.entity';
 import { Property } from '../properties/property.entity';
-import { PropertyService } from '../properties/property.service';
 import { Review } from '../reviews/review.entity';
 import { Payment } from './payment.entity';
-import { PaymentService } from './payment.service';
 
 describe('PaymentsController (e2e)', () => {
     let app: TestingApp;
@@ -208,23 +206,23 @@ describe('PaymentsController (e2e)', () => {
         expect(mine.body.data.data.every((p: any) => p.propertyId === propertyA)).toBe(true);
     });
 
-    // The webhook route needs `req.rawBody`, which depends on a framework fix
-    // (capturing the raw bytes for byte-exact HMAC verification) that is
-    // committed upstream in dolph but not yet published to the
-    // `@dolphjs/dolph` version this app installs from npm — see the README's
-    // Payments section. Until it's published, the controller safely 400s
-    // rather than trusting a re-serialized body for signature verification.
-    // The full success/idempotency/re-verify behavior of `handleWebhook`
-    // itself IS covered end-to-end at the service layer in
-    // payments.service.spec.ts, with a directly-supplied raw body.
-    it('the webhook route 400s until req.rawBody is available (pending @dolphjs/dolph publish)', async () => {
+    it('processes a signed webhook, marks the payment paid, and features the property', async () => {
         const agent = await registerVerifiedUser('agent');
         const propertyId = await createPublishedProperty(agent.accessToken);
+
         const initiated = await request(app.engine)
             .post(`/v1/properties/${propertyId}/feature`)
             .set('Authorization', `Bearer ${agent.accessToken}`)
             .send({ durationDays: 4 });
         const reference = initiated.body.data.reference;
+
+        mockGateway.verify.mockResolvedValue({
+            status: 'success',
+            amount: initiated.body.data.amount,
+            currency: 'NGN',
+            reference,
+            providerReference: 'ps_e2e_ref',
+        });
 
         const payload = { event: 'charge.success', data: { reference } };
         const rawBody = Buffer.from(JSON.stringify(payload));
@@ -235,9 +233,64 @@ describe('PaymentsController (e2e)', () => {
             .set('Content-Type', 'application/json')
             .set('x-paystack-signature', signature)
             .send(payload);
+        expect(webhook.status).toBe(200);
 
-        expect(webhook.status).toBe(400);
-        expect(webhook.body.message).toMatch(/raw request body/);
+        const fetched = await request(app.engine)
+            .get(`/v1/payments/${reference}`)
+            .set('Authorization', `Bearer ${agent.accessToken}`);
+        expect(fetched.body.data.status).toBe('paid');
+
+        const property = await request(app.engine).get(`/v1/properties/${propertyId}`);
+        expect(property.body.data.isFeatured).toBe(true);
+    });
+
+    it('rejects a webhook whose signature does not match', async () => {
+        mockGateway.verifyWebhookSignature.mockReturnValueOnce(false);
+
+        const res = await request(app.engine)
+            .post('/v1/payments/webhooks/paystack')
+            .set('Content-Type', 'application/json')
+            .set('x-paystack-signature', 'not-a-real-signature')
+            .send({ event: 'charge.success', data: { reference: 'whatever' } });
+
+        expect(res.status).toBe(401);
+    });
+
+    it('a redelivered webhook for an already-paid payment is a no-op', async () => {
+        const agent = await registerVerifiedUser('agent');
+        const propertyId = await createPublishedProperty(agent.accessToken);
+        const initiated = await request(app.engine)
+            .post(`/v1/properties/${propertyId}/feature`)
+            .set('Authorization', `Bearer ${agent.accessToken}`)
+            .send({ durationDays: 4 });
+        const reference = initiated.body.data.reference;
+
+        mockGateway.verify.mockResolvedValue({
+            status: 'success',
+            amount: initiated.body.data.amount,
+            currency: 'NGN',
+            reference,
+            providerReference: 'ps_e2e_redelivery',
+        });
+        const payload = { event: 'charge.success', data: { reference } };
+        const rawBody = Buffer.from(JSON.stringify(payload));
+        const signature = createHmac('sha512', 'sk_test_dummy_key_for_tests').update(rawBody).digest('hex');
+
+        await request(app.engine)
+            .post('/v1/payments/webhooks/paystack')
+            .set('Content-Type', 'application/json')
+            .set('x-paystack-signature', signature)
+            .send(payload);
+        mockGateway.verify.mockClear();
+
+        const redelivered = await request(app.engine)
+            .post('/v1/payments/webhooks/paystack')
+            .set('Content-Type', 'application/json')
+            .set('x-paystack-signature', signature)
+            .send(payload);
+
+        expect(redelivered.status).toBe(200);
+        expect(mockGateway.verify).not.toHaveBeenCalled();
     });
 
     it('only an admin can refund a paid payment', async () => {
@@ -249,13 +302,23 @@ describe('PaymentsController (e2e)', () => {
             .set('Authorization', `Bearer ${agent.accessToken}`)
             .send({ durationDays: 6 });
         const paymentId = initiated.body.data.id;
+        const reference = initiated.body.data.reference;
 
-        // Seed the PAID state directly at the service layer — the webhook
-        // route can't be exercised over HTTP yet (see the test above), so
-        // this mirrors what a successful webhook delivery would have done.
-        const paymentService = new PaymentService();
-        await paymentService.markPaid(paymentId, 'ps_e2e_refund_ref');
-        await new PropertyService().markFeatured(propertyId, new Date(Date.now() + 6 * 24 * 60 * 60 * 1000));
+        mockGateway.verify.mockResolvedValue({
+            status: 'success',
+            amount: initiated.body.data.amount,
+            currency: 'NGN',
+            reference,
+            providerReference: 'ps_e2e_refund_ref',
+        });
+        const payload = { event: 'charge.success', data: { reference } };
+        const rawBody = Buffer.from(JSON.stringify(payload));
+        const signature = createHmac('sha512', 'sk_test_dummy_key_for_tests').update(rawBody).digest('hex');
+        await request(app.engine)
+            .post('/v1/payments/webhooks/paystack')
+            .set('Content-Type', 'application/json')
+            .set('x-paystack-signature', signature)
+            .send(payload);
 
         const deniedForAgent = await request(app.engine)
             .post(`/v1/payments/${paymentId}/refund`)

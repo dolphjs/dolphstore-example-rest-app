@@ -48,12 +48,9 @@ export class PaymentsController extends DolphControllerHandler<Dolph> {
 
     @Post('payments/webhooks/paystack')
     async paystackWebhook(@DReq() req: DRequest, @DHeaders() headers: Record<string, string>) {
-        // TODO: drop this cast once @dolphjs/dolph is republished with
-        // req.rawBody support (framework fix already committed upstream).
-        const rawBody = (req as any).rawBody as Buffer | undefined;
-        if (!rawBody) throw new BadRequestException('missing raw request body');
+        if (!req.rawBody) throw new BadRequestException('missing raw request body');
 
-        await this.paymentsService.handleWebhook(rawBody, headers['x-paystack-signature'], req.body);
+        await this.paymentsService.handleWebhook(req.rawBody, headers['x-paystack-signature'], req.body);
         return { received: true };
     }
 }

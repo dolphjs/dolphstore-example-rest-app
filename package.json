@@ -2,7 +2,7 @@
   "author": "Utee Akaninyene <github.com/xlaez>",
   "description": "DolphStore — a real estate REST API built with DolphJS, TypeORM, and PostgreSQL.",
   "dependencies": {
-    "@dolphjs/dolph": "^2.0.1",
+    "@dolphjs/dolph": "^2.0.3",
     "@sendbyte/node": "^0.2.1",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
