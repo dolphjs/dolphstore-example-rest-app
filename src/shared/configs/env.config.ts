@@ -10,10 +10,6 @@ const { error, value: vars } = envSchema.validate(process.env, {
 });
 
 if (error) {
-    // Thrown at import time, before DolphFactory ever constructs — a
-    // misconfigured deployment should fail immediately on boot with a
-    // readable list of what's wrong, not surface as a cryptic runtime
-    // error the first time a service touches the missing value.
     const details = error.details.map((detail) => `  - ${detail.message}`).join('\n');
     throw new Error(`Invalid environment configuration:\n${details}`);
 }
