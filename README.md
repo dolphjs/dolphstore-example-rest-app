@@ -20,6 +20,16 @@ yarn dev:start          # dolph watch
 
 The app **refuses to boot** if `.env` is missing or malformed — see [`src/shared/configs/env.schema.ts`](src/shared/configs/env.schema.ts) for the exact rules. Fix-the-list-it-prints-you rather than guessing.
 
+### API Docs
+
+[`docs/openapi.json`](docs/openapi.json) is the OpenAPI 3.0 spec for every endpoint — paste it into [Swagger Editor](https://editor.swagger.io) or Postman, or view it locally:
+
+```bash
+npx @redocly/cli preview-docs docs/openapi.json
+```
+
+Update it whenever a route, DTO, or response shape changes.
+
 ### Database
 
 ```bash

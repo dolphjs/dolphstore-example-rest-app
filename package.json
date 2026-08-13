@@ -1,5 +1,5 @@
 {
-  "author": "",
+  "author": "Utee Akaninyene <github.com/xlaez>",
   "description": "DolphStore — a real estate REST API built with DolphJS, TypeORM, and PostgreSQL.",
   "dependencies": {
     "@dolphjs/dolph": "^2.0.1",
