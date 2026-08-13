@@ -29,7 +29,46 @@
         },
         "responses": {
           "200": {
-            "description": "User registered",
+            "description": "User registered — a 6-digit verification code was emailed; login is blocked until it's confirmed via /auth/verify-email",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessEnvelope" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": { "$ref": "#/components/schemas/RegisterResult" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/ValidationError" },
+          "409": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/auth/verify-email": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Confirm a registration with the 6-digit code emailed to the user",
+        "operationId": "verifyEmail",
+        "security": [],
+        "description": "On success, the account is marked verified and a token pair is issued immediately — no separate login call is needed.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/VerifyEmailDto" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Email verified",
             "content": {
               "application/json": {
                 "schema": {
@@ -47,7 +86,52 @@
             }
           },
           "400": { "$ref": "#/components/responses/ValidationError" },
-          "409": { "$ref": "#/components/responses/Error" }
+          "401": {
+            "description": "Invalid, expired, or already-used code",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+          },
+          "409": {
+            "description": "Email already verified",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+          }
+        }
+      }
+    },
+    "/auth/resend-verification": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Resend the email verification code",
+        "operationId": "resendVerification",
+        "security": [],
+        "description": "Always returns 200 with the same generic message, regardless of whether the account exists, is already verified, or is within the 60-second resend cooldown — this prevents the endpoint from being used to enumerate registered emails.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ResendVerificationDto" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Generic acknowledgement",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessEnvelope" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": { "$ref": "#/components/schemas/MessageResult" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/ValidationError" }
         }
       }
     },
@@ -85,7 +169,14 @@
             }
           },
           "400": { "$ref": "#/components/responses/ValidationError" },
-          "401": { "$ref": "#/components/responses/Error" }
+          "401": {
+            "description": "Invalid email or password",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+          },
+          "403": {
+            "description": "Credentials are correct, but the email hasn't been verified yet",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+          }
         }
       }
     },
@@ -324,6 +415,21 @@
           "refreshToken": { "type": "string" }
         }
       },
+      "VerifyEmailDto": {
+        "type": "object",
+        "required": ["email", "code"],
+        "properties": {
+          "email": { "type": "string", "format": "email" },
+          "code": { "type": "string", "pattern": "^\\d{6}$", "example": "482913" }
+        }
+      },
+      "ResendVerificationDto": {
+        "type": "object",
+        "required": ["email"],
+        "properties": {
+          "email": { "type": "string", "format": "email" }
+        }
+      },
       "User": {
         "type": "object",
         "properties": {
@@ -335,7 +441,8 @@
           "firstName": { "type": "string" },
           "lastName": { "type": "string" },
           "phone": { "type": "string" },
-          "role": { "type": "string", "enum": ["admin", "agent", "user"] }
+          "role": { "type": "string", "enum": ["admin", "agent", "user"] },
+          "emailVerifiedAt": { "type": "string", "format": "date-time", "nullable": true }
         }
       },
       "TokenPair": {
@@ -357,6 +464,13 @@
         "type": "object",
         "properties": {
           "message": { "type": "string" }
+        }
+      },
+      "RegisterResult": {
+        "type": "object",
+        "properties": {
+          "message": { "type": "string" },
+          "user": { "$ref": "#/components/schemas/User" }
         }
       }
     }

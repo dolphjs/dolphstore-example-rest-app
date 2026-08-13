@@ -26,11 +26,12 @@ describe('EmailService', () => {
     });
 
     it('sendTemplate() renders the named MJML template and sends the resulting HTML', async () => {
-        await emailService.sendTemplate('welcome', { firstName: 'Amaka' }, { to: 'user@example.com', subject: 'Welcome' });
+        await emailService.sendTemplate('verify-email', { firstName: 'Amaka', code: '482913' }, { to: 'user@example.com', subject: 'Verify' });
 
         const call = provider.send.mock.calls[0][0];
-        expect(call.html).toContain('Welcome to DolphStore, Amaka!');
+        expect(call.html).toContain('Verify your email, Amaka');
+        expect(call.html).toContain('482913');
         expect(call.to).toBe('user@example.com');
-        expect(call.subject).toBe('Welcome');
+        expect(call.subject).toBe('Verify');
     });
 });

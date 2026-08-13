@@ -54,4 +54,8 @@ export class UserService extends DolphServiceHandler<Dolph> {
         const { password, ...safeUser } = user;
         return safeUser;
     }
+
+    async markEmailVerified(userId: string): Promise<void> {
+        await this.repo.update({ id: userId }, { emailVerifiedAt: new Date() });
+    }
 }

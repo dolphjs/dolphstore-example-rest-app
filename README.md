@@ -128,20 +128,24 @@ Add new env vars to `env.schema.ts` (with a real Joi constraint, not a rubber-st
 
 All routes below are mounted at `/v1/auth`.
 
-| Method | Path          | Auth required | Notes                                                    |
-| ------ | ------------- | -------------- | --------------------------------------------------------- |
-| POST   | `/register`   | —              | `role` optional, defaults to `user`; `admin` can't self-assign |
-| POST   | `/login`      | —              |                                                             |
-| POST   | `/refresh`    | —              | Rotates the pair; the old refresh token stops working      |
-| POST   | `/logout`     | Bearer token   | Revokes the refresh token in the body                      |
-| POST   | `/logout-all` | Bearer token   | Revokes every refresh token issued to the user             |
-| GET    | `/me`         | Bearer token   |                                                             |
+| Method | Path                  | Auth required | Notes                                                                 |
+| ------ | --------------------- | -------------- | ---------------------------------------------------------------------- |
+| POST   | `/register`           | —              | No tokens issued — creates the account and emails a 6-digit code; `role` optional (defaults to `user`, `admin` can't self-assign) |
+| POST   | `/verify-email`       | —              | Confirms the code; issues a token pair on success (no separate login needed) |
+| POST   | `/resend-verification`| —              | Always 200 with the same generic message — doesn't leak whether the email is registered |
+| POST   | `/login`              | —              | 403 if the email hasn't been verified yet                              |
+| POST   | `/refresh`            | —              | Rotates the pair; the old refresh token stops working                  |
+| POST   | `/logout`             | Bearer token   | Revokes the refresh token in the body                                  |
+| POST   | `/logout-all`         | Bearer token   | Revokes every refresh token issued to the user                         |
+| GET    | `/me`                 | Bearer token   |                                                                          |
 
 Passwords are hashed with bcrypt (`@dolphjs/dolph`'s `hashString`/`compareHashedString`) and the `password` column is `select: false` — it's never returned in a response unless a query explicitly opts in (`UserService#findByEmailWithPassword`, used only for login).
 
 Refresh tokens are rotated on every use and tracked per-device in the `refresh_tokens` table: each row's `id` doubles as the JWT's `jti` claim, and only a bcrypt hash of the signed token is stored — see `TokenService`.
 
-`IamService` is the module's upper-level service (see "Services" above); `UserService`, `TokenService`, and `EmailService` are the lower-level services it orchestrates. Registration sends a welcome email best-effort — a delivery failure is logged, not thrown, so a provider outage never blocks account creation.
+Email verification codes (`email_verification_codes` table, `EmailVerificationService`) are 6 digits, bcrypt-hashed at rest, expire after 15 minutes, lock out after 5 wrong guesses (forcing a resend), and are rate-limited to one issue per 60 seconds per user — `register` and `/resend-verification` both go through the same `issueCode`, so that cooldown applies to both.
+
+`IamService` is the module's upper-level service (see "Services" above); `UserService`, `TokenService`, `EmailService`, and `EmailVerificationService` are the lower-level services it orchestrates. The verification email send is best-effort — a delivery failure is logged, not thrown, so a provider outage never blocks account creation (the user can always hit `/resend-verification` once it's back).
 
 ## Email (`src/shared/email`)
 
@@ -149,11 +153,13 @@ Application code depends on `EmailProvider` (`send(message): Promise<EmailSendRe
 
 ```ts
 await this.emailService.sendTemplate(
-  'welcome',
-  { firstName: user.firstName },
-  { to: user.email, subject: 'Welcome to DolphStore' },
+  'verify-email',
+  { firstName: user.firstName, code },
+  { to: user.email, subject: 'Verify your email' },
 );
 ```
+
+**Testing note:** if a spec builds its `TestingApp` with `overrides` (e.g. to mock `EmailService`), pass the component as a lazy loader — `() => import('./iam.component').then(m => m.IamComponent)` — not an eagerly-imported class. `@Component` resolves and constructs every listed service the moment its module is evaluated; an eager `import` at the top of the spec file runs that resolution (with the real, unmocked service) before `overrides` ever gets a chance to seed the registry. See `iam.controller.e2e-spec.ts`.
 
 `sendTemplate` renders an `.mjml` file from `src/shared/email/templates` with Handlebars variables, compiling MJML once per template (cached) so repeated sends only re-run the cheap Handlebars substitution. Add a template by dropping a `.mjml` file in that folder and referencing its name.
 

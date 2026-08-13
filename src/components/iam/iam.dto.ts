@@ -41,3 +41,16 @@ export class RefreshTokenDto {
     @IsString()
     refreshToken!: string;
 }
+
+export class VerifyEmailDto {
+    @IsEmail()
+    email!: string;
+
+    @Matches(/^\d{6}$/, { message: 'code must be a 6-digit number' })
+    code!: string;
+}
+
+export class ResendVerificationDto {
+    @IsEmail()
+    email!: string;
+}

@@ -22,4 +22,7 @@ export class User extends AbstractEntity {
 
     @Column({ type: 'simple-enum', enum: Role, default: Role.USER })
     role!: Role;
+
+    @Column({ nullable: true })
+    emailVerifiedAt!: Date | null;
 }

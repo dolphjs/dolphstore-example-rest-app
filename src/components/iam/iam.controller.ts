@@ -2,7 +2,7 @@ import { DolphControllerHandler } from '@dolphjs/dolph/classes';
 import { Dolph } from '@dolphjs/dolph/common';
 import { DBody, DHeaders, DPayload, Get, Post, Route, UseMiddleware } from '@dolphjs/dolph/decorators';
 import { JwtPayload } from '../../shared/interfaces';
-import { LoginDto, RefreshTokenDto, RegisterDto } from './iam.dto';
+import { LoginDto, RefreshTokenDto, RegisterDto, ResendVerificationDto, VerifyEmailDto } from './iam.dto';
 import { IamService } from './iam.service';
 import { authShield } from './iam.shield';
 
@@ -13,13 +13,23 @@ export class IamController extends DolphControllerHandler<Dolph> {
     }
 
     @Post('register')
-    async register(@DBody(RegisterDto) body: RegisterDto, @DHeaders() headers: Record<string, string>) {
-        return this.iamService.register(body, headers['user-agent']);
+    async register(@DBody(RegisterDto) body: RegisterDto) {
+        return this.iamService.register(body);
     }
 
     @Post('login')
     async login(@DBody(LoginDto) body: LoginDto, @DHeaders() headers: Record<string, string>) {
         return this.iamService.login(body, headers['user-agent']);
+    }
+
+    @Post('verify-email')
+    async verifyEmail(@DBody(VerifyEmailDto) body: VerifyEmailDto, @DHeaders() headers: Record<string, string>) {
+        return this.iamService.verifyEmail(body.email, body.code, headers['user-agent']);
+    }
+
+    @Post('resend-verification')
+    async resendVerification(@DBody(ResendVerificationDto) body: ResendVerificationDto) {
+        return this.iamService.resendVerificationCode(body.email);
     }
 
     @Post('refresh')
