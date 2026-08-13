@@ -185,7 +185,24 @@ Two authorization layers, checked in order: `requireRole(Role.AGENT, Role.ADMIN)
 
 `price`/`areaSqm` are `decimal` columns with an explicit TypeORM `transformer` — Postgres's `pg` driver returns `numeric` as a string by default (a well-known gotcha), so without it every property's `price` would come back as `"45000.00"` instead of `45000` in API responses. Confirmed empirically against a real Postgres container before committing, not just assumed from sqlite (which returns `decimal` as a native `number` either way, so it wouldn't have caught this).
 
-`PropertiesService` is the upper-level service; `PropertyService` (search/CRUD via a TypeORM query builder — `LOWER(...) LIKE LOWER(...)` for city/state, not `ILIKE`, since `ILIKE` is Postgres-only and breaks the sqlite-backed tests) and `PropertyImageService` (wraps `ImageStorageService`, tracks image `position`) are the lower-level ones it composes.
+`PropertiesService` is the upper-level service; `PropertyService` (search/CRUD via a TypeORM query builder — `LOWER(...) LIKE LOWER(...)` for city/state, not `ILIKE`, since `ILIKE` is Postgres-only and breaks the sqlite-backed tests), `PropertyImageService` (wraps `ImageStorageService`, tracks image `position`), and `ReviewService` (for the `averageRating`/`reviewCount` rollup below) are the lower-level ones it composes.
+
+Every `Property` response includes `averageRating`/`reviewCount`, computed from the `reviews` table on read (never denormalized onto the row, so there's no sync logic to get wrong). A single-property lookup (`/properties/:id`) runs one aggregate query; a search/list result batches all returned property IDs into a single `GROUP BY` query rather than one query per row. Postgres's raw aggregate functions (`AVG`, `COUNT`) return strings, not numbers — confirmed empirically the same way as the `price` transformer, and normalized with `parseFloat`/`parseInt` in `ReviewService#getAggregatesForProperties`.
+
+## Reviews (`src/components/reviews`)
+
+Mixed routing: `POST`/`GET /v1/properties/:id/reviews` (nested — creating/listing reviews is naturally scoped to a property) and `PATCH`/`DELETE /v1/reviews/:id` (flat — a review has its own identity once it exists, doesn't need the property in the path to be updated or deleted). Both live on one `ReviewsController` via `@Route('')` with fully explicit per-method paths, rather than being split across two controller classes.
+
+| Method | Path                          | Auth required          | Notes                                                    |
+| ------ | ------------------------------ | ------------------------ | ----------------------------------------------------------- |
+| GET    | `/properties/:id/reviews`      | —                       | 404 if the property isn't `published`                    |
+| POST   | `/properties/:id/reviews`      | Bearer (any verified user)| One per user per property (DB-enforced unique index too); the listing's own agent can't review it |
+| PATCH  | `/reviews/:id`                 | Bearer, author or admin |                                                              |
+| DELETE | `/reviews/:id`                 | Bearer, author or admin | Soft delete                                                 |
+
+No separate "must be verified" check needed on top of `authShield` — `login()` already refuses to issue a token to an unverified account (see the Auth section), so any request that clears `authShield` is already from a verified user.
+
+`ReviewsService` is the upper-level service (property-existence/published checks, self-review block, one-review-per-user, ownership-or-admin on update/delete); `ReviewService` is the lower-level one (CRUD + the aggregate query above). `PropertiesComponent`'s `services` array lists `ReviewService` directly — DolphJS's `@Component` DI requires every service a constructor injects to be declared in that same component, even one that "belongs" to a different module, since the actual instance is still deduplicated through the global registry.
 
 ## Media (`src/shared/storage`)
 
@@ -197,5 +214,5 @@ Same swappable-provider shape as email: `ImageStorageProvider` (`upload(buffer, 
 - [x] IAM: registration, login, JWT access + refresh token rotation
 - [x] Email: MJML + Handlebars templates, Sendbyte provider behind a swappable interface
 - [x] Properties/Listings: CRUD, Cloudinary-backed image upload, search & filtering
-- [ ] Reviews/Ratings
+- [x] Reviews/Ratings: per-property reviews, computed rating rollup on Property responses
 - [ ] Payments: Paystack + Flutterwave

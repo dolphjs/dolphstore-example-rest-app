@@ -2,22 +2,22 @@ import { DolphServiceHandler } from '@dolphjs/dolph/classes';
 import { Dolph, ForbiddenException, NotFoundException } from '@dolphjs/dolph/common';
 import { DService } from '@dolphjs/dolph/decorators';
 import { Role } from '../../shared/enums';
+import { Requester } from '../../shared/interfaces';
+import { RatingAggregate, ReviewService } from '../reviews/review.service';
 import { PropertyImageService } from './property-image.service';
 import { CreatePropertyDto, SearchPropertiesDto, UpdatePropertyDto } from './property.dto';
 import { Property } from './property.entity';
 import { ListingStatus } from './property.enums';
 import { PropertyService } from './property.service';
 
-export interface Requester {
-    userId: string;
-    role: Role;
-}
+export type PropertyWithRating = Property & RatingAggregate;
 
 @DService()
 export class PropertiesService extends DolphServiceHandler<Dolph> {
     constructor(
         private propertyService: PropertyService,
         private propertyImageService: PropertyImageService,
+        private reviewService: ReviewService,
     ) {
         super('propertiesService');
     }
@@ -27,19 +27,23 @@ export class PropertiesService extends DolphServiceHandler<Dolph> {
     }
 
     async search(query: SearchPropertiesDto) {
-        return this.propertyService.search(query, { onlyPublished: true });
+        const result = await this.propertyService.search(query, { onlyPublished: true });
+        return { ...result, data: await this.withRatings(result.data) };
     }
 
-    async findPublished(id: string): Promise<Property> {
+    async findPublished(id: string): Promise<PropertyWithRating> {
         const property = await this.propertyService.findById(id);
         if (!property || property.status !== ListingStatus.PUBLISHED) {
             throw new NotFoundException('property not found');
         }
-        return property;
+
+        const aggregate = await this.reviewService.getAggregateForProperty(id);
+        return { ...property, ...aggregate };
     }
 
     async findMine(requester: Requester, query: SearchPropertiesDto) {
-        return this.propertyService.search(query, { onlyPublished: false, agentId: requester.userId });
+        const result = await this.propertyService.search(query, { onlyPublished: false, agentId: requester.userId });
+        return { ...result, data: await this.withRatings(result.data) };
     }
 
     async update(id: string, requester: Requester, dto: UpdatePropertyDto): Promise<Property> {
@@ -69,6 +73,14 @@ export class PropertiesService extends DolphServiceHandler<Dolph> {
         }
 
         await this.propertyImageService.remove(imageId);
+    }
+
+    private async withRatings(properties: Property[]): Promise<PropertyWithRating[]> {
+        const aggregates = await this.reviewService.getAggregatesForProperties(properties.map((p) => p.id));
+        return properties.map((property) => ({
+            ...property,
+            ...(aggregates.get(property.id) ?? { averageRating: 0, reviewCount: 0 }),
+        }));
     }
 
     private async assertOwnership(id: string, requester: Requester): Promise<Property> {

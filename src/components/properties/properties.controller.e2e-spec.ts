@@ -7,6 +7,7 @@ import { ImageStorageService } from '../../shared/storage';
 import { EmailVerificationCode } from '../iam/email-verification-code.entity';
 import { RefreshToken } from '../iam/refresh-token.entity';
 import { User } from '../iam/user.entity';
+import { Review } from '../reviews/review.entity';
 import { PropertyImage } from './property-image.entity';
 import { Property } from './property.entity';
 
@@ -41,7 +42,7 @@ describe('PropertiesController (e2e)', () => {
             ],
         });
 
-        dataSource = await seedSqliteDataSource([User, RefreshToken, EmailVerificationCode, Property, PropertyImage]);
+        dataSource = await seedSqliteDataSource([User, RefreshToken, EmailVerificationCode, Property, PropertyImage, Review]);
     });
 
     afterAll(async () => {

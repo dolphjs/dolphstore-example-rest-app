@@ -11,7 +11,8 @@
   ],
   "tags": [
     { "name": "Auth", "description": "Registration, login, and session management" },
-    { "name": "Properties", "description": "Property listings and their images" }
+    { "name": "Properties", "description": "Property listings and their images" },
+    { "name": "Reviews", "description": "Property reviews and ratings" }
   ],
   "paths": {
     "/properties": {
@@ -275,6 +276,137 @@
           "401": { "$ref": "#/components/responses/Error" },
           "403": {
             "description": "Not the owning agent and not an admin",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+          },
+          "404": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/properties/{id}/reviews": {
+      "get": {
+        "tags": ["Reviews"],
+        "summary": "List reviews for a published property",
+        "operationId": "listPropertyReviews",
+        "security": [],
+        "parameters": [
+          { "$ref": "#/components/parameters/PropertyIdPathParam" },
+          { "$ref": "#/components/parameters/PageParam" },
+          { "$ref": "#/components/parameters/LimitParam" },
+          { "$ref": "#/components/parameters/OrderParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated reviews",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessEnvelope" },
+                    { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/PaginatedReviews" } } }
+                  ]
+                }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/Error" }
+        }
+      },
+      "post": {
+        "tags": ["Reviews"],
+        "summary": "Leave a review on a published property",
+        "operationId": "createReview",
+        "security": [{ "bearerAuth": [] }],
+        "description": "Any authenticated (email-verified) user except the listing's own agent — one review per user per property.",
+        "parameters": [{ "$ref": "#/components/parameters/PropertyIdPathParam" }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateReviewDto" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "Review created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessEnvelope" },
+                    { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/Review" } } }
+                  ]
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/ValidationError" },
+          "401": { "$ref": "#/components/responses/Error" },
+          "403": {
+            "description": "The caller is the property's own agent",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+          },
+          "404": { "$ref": "#/components/responses/Error" },
+          "409": {
+            "description": "The caller has already reviewed this property",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+          }
+        }
+      }
+    },
+    "/reviews/{id}": {
+      "patch": {
+        "tags": ["Reviews"],
+        "summary": "Update a review (author or admin only)",
+        "operationId": "updateReview",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/ReviewIdPathParam" }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdateReviewDto" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated review",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessEnvelope" },
+                    { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/Review" } } }
+                  ]
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/ValidationError" },
+          "401": { "$ref": "#/components/responses/Error" },
+          "403": {
+            "description": "Not the review's author and not an admin",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+          },
+          "404": { "$ref": "#/components/responses/Error" }
+        }
+      },
+      "delete": {
+        "tags": ["Reviews"],
+        "summary": "Delete a review (author or admin only)",
+        "operationId": "deleteReview",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/ReviewIdPathParam" }],
+        "responses": {
+          "200": {
+            "description": "Deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessEnvelope" },
+                    { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/MessageResult" } } }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Error" },
+          "403": {
+            "description": "Not the review's author and not an admin",
             "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
           },
           "404": { "$ref": "#/components/responses/Error" }
@@ -597,7 +729,8 @@
       "PageParam": { "name": "page", "in": "query", "schema": { "type": "integer", "minimum": 1, "default": 1 } },
       "LimitParam": { "name": "limit", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 100, "default": 20 } },
       "OrderParam": { "name": "order", "in": "query", "schema": { "type": "string", "enum": ["ASC", "DESC"], "default": "DESC" } },
-      "PropertyIdPathParam": { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+      "PropertyIdPathParam": { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+      "ReviewIdPathParam": { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
     },
     "responses": {
       "Error": {
@@ -819,13 +952,53 @@
           "country": { "type": "string" },
           "status": { "type": "string", "enum": ["draft", "published", "archived"] },
           "agentId": { "type": "string", "format": "uuid" },
-          "images": { "type": "array", "items": { "$ref": "#/components/schemas/PropertyImage" } }
+          "images": { "type": "array", "items": { "$ref": "#/components/schemas/PropertyImage" } },
+          "averageRating": { "type": "number", "description": "Computed from reviews on read, not stored. 0 with no reviews." },
+          "reviewCount": { "type": "integer" }
         }
       },
       "PaginatedProperties": {
         "type": "object",
         "properties": {
           "data": { "type": "array", "items": { "$ref": "#/components/schemas/Property" } },
+          "total": { "type": "integer" },
+          "page": { "type": "integer" },
+          "limit": { "type": "integer" }
+        }
+      },
+      "CreateReviewDto": {
+        "type": "object",
+        "required": ["rating", "comment"],
+        "properties": {
+          "rating": { "type": "integer", "minimum": 1, "maximum": 5 },
+          "comment": { "type": "string", "minLength": 1, "maxLength": 1000 }
+        }
+      },
+      "UpdateReviewDto": {
+        "type": "object",
+        "description": "All fields optional — send only what's changing.",
+        "properties": {
+          "rating": { "type": "integer", "minimum": 1, "maximum": 5 },
+          "comment": { "type": "string", "minLength": 1, "maxLength": 1000 }
+        }
+      },
+      "Review": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" },
+          "deletedAt": { "type": "string", "format": "date-time", "nullable": true },
+          "propertyId": { "type": "string", "format": "uuid" },
+          "userId": { "type": "string", "format": "uuid" },
+          "rating": { "type": "integer", "minimum": 1, "maximum": 5 },
+          "comment": { "type": "string" }
+        }
+      },
+      "PaginatedReviews": {
+        "type": "object",
+        "properties": {
+          "data": { "type": "array", "items": { "$ref": "#/components/schemas/Review" } },
           "total": { "type": "integer" },
           "page": { "type": "integer" },
           "limit": { "type": "integer" }

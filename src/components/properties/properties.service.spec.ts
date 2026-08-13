@@ -1,15 +1,18 @@
 import { DataSource } from 'typeorm';
 import { seedSqliteDataSource } from '../../../tests/utils/sqlite-datasource';
 import { Role } from '../../shared/enums';
+import { Requester } from '../../shared/interfaces';
 import { ImageStorageService } from '../../shared/storage';
 import { User } from '../iam/user.entity';
 import { UserService } from '../iam/user.service';
+import { Review } from '../reviews/review.entity';
+import { ReviewService } from '../reviews/review.service';
 import { PropertyImage } from './property-image.entity';
 import { PropertyImageService } from './property-image.service';
 import { ListingStatus, ListingType, PropertyType } from './property.enums';
 import { Property } from './property.entity';
 import { PropertyService } from './property.service';
-import { PropertiesService, Requester } from './properties.service';
+import { PropertiesService } from './properties.service';
 
 describe('PropertiesService', () => {
     let dataSource: DataSource;
@@ -31,7 +34,7 @@ describe('PropertiesService', () => {
     };
 
     beforeAll(async () => {
-        dataSource = await seedSqliteDataSource([User, Property, PropertyImage]);
+        dataSource = await seedSqliteDataSource([User, Property, PropertyImage, Review]);
 
         const userService = new UserService();
         const ownerUser = await userService.create({
@@ -72,6 +75,7 @@ describe('PropertiesService', () => {
         propertiesService = new PropertiesService(
             new PropertyService(),
             new PropertyImageService(imageStorage as unknown as ImageStorageService),
+            new ReviewService(),
         );
     });
 
@@ -151,5 +155,34 @@ describe('PropertiesService', () => {
 
         const result = await propertiesService.findMine(owner, { page: 1, limit: 20, order: 'DESC', city: 'MineTest' });
         expect(result.data.every((p) => p.agentId === owner.userId)).toBe(true);
+    });
+
+    it('findPublished includes a rating rollup, defaulting to zero with no reviews', async () => {
+        const property = await propertiesService.create(owner.userId, { ...baseDto, city: 'RatingTest' });
+        await propertiesService.update(property.id, owner, { status: ListingStatus.PUBLISHED });
+
+        const found = await propertiesService.findPublished(property.id);
+        expect(found.averageRating).toBe(0);
+        expect(found.reviewCount).toBe(0);
+
+        await dataSource.getRepository(Review).save(
+            dataSource.getRepository(Review).create({ propertyId: property.id, userId: otherAgent.userId, rating: 5, comment: 'x' }),
+        );
+
+        const foundAgain = await propertiesService.findPublished(property.id);
+        expect(foundAgain.averageRating).toBe(5);
+        expect(foundAgain.reviewCount).toBe(1);
+    });
+
+    it('search results include the rating rollup for each property', async () => {
+        const property = await propertiesService.create(owner.userId, { ...baseDto, city: 'SearchRatingTest' });
+        await propertiesService.update(property.id, owner, { status: ListingStatus.PUBLISHED });
+        await dataSource.getRepository(Review).save(
+            dataSource.getRepository(Review).create({ propertyId: property.id, userId: otherAgent.userId, rating: 3, comment: 'x' }),
+        );
+
+        const result = await propertiesService.search({ page: 1, limit: 20, order: 'DESC', city: 'SearchRatingTest' });
+        expect(result.data[0].averageRating).toBe(3);
+        expect(result.data[0].reviewCount).toBe(1);
     });
 });
