@@ -27,6 +27,11 @@ export const envSchema = Joi.object({
         .pattern(/^sk_(test|live)_/)
         .required(),
 
+    IMAGE_STORAGE_PROVIDER: Joi.string().valid('cloudinary').default('cloudinary'),
+    CLOUDINARY_CLOUD_NAME: Joi.string().required(),
+    CLOUDINARY_API_KEY: Joi.string().required(),
+    CLOUDINARY_API_SECRET: Joi.string().required(),
+
     PAYSTACK_SECRET_KEY: Joi.string().allow('').optional(),
     PAYSTACK_PUBLIC_KEY: Joi.string().allow('').optional(),
     FLUTTERWAVE_SECRET_KEY: Joi.string().allow('').optional(),
@@ -51,6 +56,10 @@ export type EnvVars = {
     EMAIL_PROVIDER: 'sendbyte';
     EMAIL_FROM: string;
     SENDBYTE_API_KEY: string;
+    IMAGE_STORAGE_PROVIDER: 'cloudinary';
+    CLOUDINARY_CLOUD_NAME: string;
+    CLOUDINARY_API_KEY: string;
+    CLOUDINARY_API_SECRET: string;
     PAYSTACK_SECRET_KEY?: string;
     PAYSTACK_PUBLIC_KEY?: string;
     FLUTTERWAVE_SECRET_KEY?: string;

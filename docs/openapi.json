@@ -10,9 +10,277 @@
     { "url": "http://localhost:3300/v1", "description": "Local development" }
   ],
   "tags": [
-    { "name": "Auth", "description": "Registration, login, and session management" }
+    { "name": "Auth", "description": "Registration, login, and session management" },
+    { "name": "Properties", "description": "Property listings and their images" }
   ],
   "paths": {
+    "/properties": {
+      "get": {
+        "tags": ["Properties"],
+        "summary": "Search published property listings",
+        "operationId": "searchProperties",
+        "security": [],
+        "parameters": [
+          { "$ref": "#/components/parameters/PageParam" },
+          { "$ref": "#/components/parameters/LimitParam" },
+          { "$ref": "#/components/parameters/OrderParam" },
+          { "name": "city", "in": "query", "schema": { "type": "string" } },
+          { "name": "state", "in": "query", "schema": { "type": "string" } },
+          { "name": "listingType", "in": "query", "schema": { "type": "string", "enum": ["sale", "rent"] } },
+          { "name": "propertyType", "in": "query", "schema": { "type": "string", "enum": ["apartment", "house", "land", "commercial"] } },
+          { "name": "minPrice", "in": "query", "schema": { "type": "number" } },
+          { "name": "maxPrice", "in": "query", "schema": { "type": "number" } },
+          { "name": "minBedrooms", "in": "query", "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated published listings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessEnvelope" },
+                    { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/PaginatedProperties" } } }
+                  ]
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/ValidationError" }
+        }
+      },
+      "post": {
+        "tags": ["Properties"],
+        "summary": "Create a property listing (starts as draft)",
+        "operationId": "createProperty",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreatePropertyDto" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "Property created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessEnvelope" },
+                    { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/Property" } } }
+                  ]
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/ValidationError" },
+          "401": { "$ref": "#/components/responses/Error" },
+          "403": {
+            "description": "Authenticated, but not an agent or admin",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+          }
+        }
+      }
+    },
+    "/properties/mine": {
+      "get": {
+        "tags": ["Properties"],
+        "summary": "List the current agent's own listings, at any status",
+        "operationId": "myProperties",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/PageParam" },
+          { "$ref": "#/components/parameters/LimitParam" },
+          { "$ref": "#/components/parameters/OrderParam" },
+          { "name": "city", "in": "query", "schema": { "type": "string" } },
+          { "name": "state", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated listings owned by the caller",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessEnvelope" },
+                    { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/PaginatedProperties" } } }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Error" },
+          "403": {
+            "description": "Authenticated, but not an agent or admin",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+          }
+        }
+      }
+    },
+    "/properties/{id}": {
+      "get": {
+        "tags": ["Properties"],
+        "summary": "Get a single published property",
+        "operationId": "getProperty",
+        "security": [],
+        "parameters": [{ "$ref": "#/components/parameters/PropertyIdPathParam" }],
+        "responses": {
+          "200": {
+            "description": "The property",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessEnvelope" },
+                    { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/Property" } } }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (includes drafts/archived — this route only ever returns published listings)",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+          }
+        }
+      },
+      "patch": {
+        "tags": ["Properties"],
+        "summary": "Update a property (owning agent or admin only)",
+        "operationId": "updateProperty",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/PropertyIdPathParam" }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdatePropertyDto" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated property",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessEnvelope" },
+                    { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/Property" } } }
+                  ]
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/ValidationError" },
+          "401": { "$ref": "#/components/responses/Error" },
+          "403": {
+            "description": "Not the owning agent and not an admin",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+          },
+          "404": { "$ref": "#/components/responses/Error" }
+        }
+      },
+      "delete": {
+        "tags": ["Properties"],
+        "summary": "Soft-delete a property (owning agent or admin only)",
+        "operationId": "deleteProperty",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/PropertyIdPathParam" }],
+        "responses": {
+          "200": {
+            "description": "Deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessEnvelope" },
+                    { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/MessageResult" } } }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Error" },
+          "403": {
+            "description": "Not the owning agent and not an admin",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+          },
+          "404": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/properties/{id}/images": {
+      "post": {
+        "tags": ["Properties"],
+        "summary": "Upload a property image (owning agent or admin only)",
+        "operationId": "uploadPropertyImage",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/PropertyIdPathParam" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["image"],
+                "properties": { "image": { "type": "string", "format": "binary" } }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Image uploaded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessEnvelope" },
+                    { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/PropertyImage" } } }
+                  ]
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/ValidationError" },
+          "401": { "$ref": "#/components/responses/Error" },
+          "403": {
+            "description": "Not the owning agent and not an admin",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+          },
+          "404": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/properties/{id}/images/{imageId}": {
+      "delete": {
+        "tags": ["Properties"],
+        "summary": "Remove a property image (owning agent or admin only)",
+        "operationId": "removePropertyImage",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/PropertyIdPathParam" },
+          { "name": "imageId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessEnvelope" },
+                    { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/MessageResult" } } }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Error" },
+          "403": {
+            "description": "Not the owning agent and not an admin",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+          },
+          "404": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
     "/auth/register": {
       "post": {
         "tags": ["Auth"],
@@ -325,6 +593,12 @@
         "bearerFormat": "JWT"
       }
     },
+    "parameters": {
+      "PageParam": { "name": "page", "in": "query", "schema": { "type": "integer", "minimum": 1, "default": 1 } },
+      "LimitParam": { "name": "limit", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 100, "default": 20 } },
+      "OrderParam": { "name": "order", "in": "query", "schema": { "type": "string", "enum": ["ASC", "DESC"], "default": "DESC" } },
+      "PropertyIdPathParam": { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+    },
     "responses": {
       "Error": {
         "description": "Error",
@@ -471,6 +745,90 @@
         "properties": {
           "message": { "type": "string" },
           "user": { "$ref": "#/components/schemas/User" }
+        }
+      },
+      "CreatePropertyDto": {
+        "type": "object",
+        "required": ["title", "description", "price", "listingType", "propertyType", "address", "city", "state"],
+        "properties": {
+          "title": { "type": "string" },
+          "description": { "type": "string" },
+          "price": { "type": "number" },
+          "currency": { "type": "string", "default": "NGN" },
+          "listingType": { "type": "string", "enum": ["sale", "rent"] },
+          "propertyType": { "type": "string", "enum": ["apartment", "house", "land", "commercial"] },
+          "bedrooms": { "type": "integer", "default": 0 },
+          "bathrooms": { "type": "integer", "default": 0 },
+          "areaSqm": { "type": "number", "nullable": true },
+          "address": { "type": "string" },
+          "city": { "type": "string" },
+          "state": { "type": "string" },
+          "country": { "type": "string", "default": "Nigeria" }
+        }
+      },
+      "UpdatePropertyDto": {
+        "type": "object",
+        "description": "All fields optional — send only what's changing.",
+        "properties": {
+          "title": { "type": "string" },
+          "description": { "type": "string" },
+          "price": { "type": "number" },
+          "currency": { "type": "string" },
+          "listingType": { "type": "string", "enum": ["sale", "rent"] },
+          "propertyType": { "type": "string", "enum": ["apartment", "house", "land", "commercial"] },
+          "bedrooms": { "type": "integer" },
+          "bathrooms": { "type": "integer" },
+          "areaSqm": { "type": "number", "nullable": true },
+          "address": { "type": "string" },
+          "city": { "type": "string" },
+          "state": { "type": "string" },
+          "country": { "type": "string" },
+          "status": { "type": "string", "enum": ["draft", "published", "archived"] }
+        }
+      },
+      "PropertyImage": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "propertyId": { "type": "string", "format": "uuid" },
+          "url": { "type": "string", "format": "uri" },
+          "publicId": { "type": "string" },
+          "position": { "type": "integer" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Property": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" },
+          "deletedAt": { "type": "string", "format": "date-time", "nullable": true },
+          "title": { "type": "string" },
+          "description": { "type": "string" },
+          "price": { "type": "number" },
+          "currency": { "type": "string" },
+          "listingType": { "type": "string", "enum": ["sale", "rent"] },
+          "propertyType": { "type": "string", "enum": ["apartment", "house", "land", "commercial"] },
+          "bedrooms": { "type": "integer" },
+          "bathrooms": { "type": "integer" },
+          "areaSqm": { "type": "number", "nullable": true },
+          "address": { "type": "string" },
+          "city": { "type": "string" },
+          "state": { "type": "string" },
+          "country": { "type": "string" },
+          "status": { "type": "string", "enum": ["draft", "published", "archived"] },
+          "agentId": { "type": "string", "format": "uuid" },
+          "images": { "type": "array", "items": { "$ref": "#/components/schemas/PropertyImage" } }
+        }
+      },
+      "PaginatedProperties": {
+        "type": "object",
+        "properties": {
+          "data": { "type": "array", "items": { "$ref": "#/components/schemas/Property" } },
+          "total": { "type": "integer" },
+          "page": { "type": "integer" },
+          "limit": { "type": "integer" }
         }
       }
     }

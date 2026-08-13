@@ -44,6 +44,12 @@ export const env = Object.freeze({
         from: validatedVars.EMAIL_FROM,
         sendbyteApiKey: validatedVars.SENDBYTE_API_KEY,
     },
+    imageStorage: {
+        provider: validatedVars.IMAGE_STORAGE_PROVIDER,
+        cloudinaryCloudName: validatedVars.CLOUDINARY_CLOUD_NAME,
+        cloudinaryApiKey: validatedVars.CLOUDINARY_API_KEY,
+        cloudinaryApiSecret: validatedVars.CLOUDINARY_API_SECRET,
+    },
     payments: {
         paystack: {
             secretKey: validatedVars.PAYSTACK_SECRET_KEY,

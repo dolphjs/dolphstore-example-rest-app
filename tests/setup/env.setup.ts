@@ -15,3 +15,7 @@ process.env.SQL_DATABASE = 'test';
 process.env.EMAIL_PROVIDER = 'sendbyte';
 process.env.EMAIL_FROM = 'DolphStore <no-reply@dolphstore.test>';
 process.env.SENDBYTE_API_KEY = 'sk_test_dummy_key_for_tests';
+process.env.IMAGE_STORAGE_PROVIDER = 'cloudinary';
+process.env.CLOUDINARY_CLOUD_NAME = 'test-cloud';
+process.env.CLOUDINARY_API_KEY = 'test-api-key';
+process.env.CLOUDINARY_API_SECRET = 'test-api-secret';
