@@ -1,7 +1,8 @@
-import { Column, CreateDateColumn, Entity, Index, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, CreateDateColumn, Entity, Index, JoinColumn, ManyToOne, PrimaryGeneratedColumn, Unique } from 'typeorm';
 import { Property } from './property.entity';
 
 @Entity('property_images')
+@Unique('UQ_property_images_position', ['propertyId', 'position'])
 export class PropertyImage {
     @PrimaryGeneratedColumn('uuid')
     id!: string;

@@ -1,4 +1,4 @@
-import { BadRequestException, DRequest, DBody, DParam, DPayload, DQuery, DReq, Delete, Get, Patch, Post, Route, UseMiddleware, useFileUploader } from '@dolphjs/dolph';
+import { BadRequestException, DBody, DParam, DPayload, DQuery, Delete, Get, Patch, Post, Route, UseMiddleware, imageUpload, DFile, UploadedImage } from '@dolphjs/dolph';
 import { authShield } from '../iam/iam.shield';
 import { Role } from '../../shared/enums';
 import { JwtPayload } from '../../shared/interfaces';
@@ -53,15 +53,14 @@ export class PropertiesController {
         return { message: 'property removed' };
     }
 
-    @UseMiddleware(useFileUploader({ type: 'single', fieldname: 'image' }))
+    @UseMiddleware(imageUpload({ resize: { width: 2000 }, format: 'webp', quality: 80 }))
     @UseMiddleware(requireRole(Role.AGENT, Role.ADMIN))
     @UseMiddleware(authShield)
     @Post(':id/images')
-    async addImage(@DParam(PropertyIdParamDto) params: PropertyIdParamDto, @DPayload() payload: JwtPayload, @DReq() req: DRequest) {
-        const buffer = req.file?.buffer;
-        if (!buffer) throw new BadRequestException('an "image" file is required');
+    async addImage(@DParam(PropertyIdParamDto) params: PropertyIdParamDto, @DPayload() payload: JwtPayload, @DFile() image?: UploadedImage) {
+        if (!image?.buffer) throw new BadRequestException('an "image" file is required');
 
-        return this.propertiesService.addImage(params.id, { userId: payload.sub, role: payload.info.role }, buffer);
+        return this.propertiesService.addImage(params.id, { userId: payload.sub, role: payload.info.role }, image.buffer);
     }
 
     @UseMiddleware(requireRole(Role.AGENT, Role.ADMIN))
