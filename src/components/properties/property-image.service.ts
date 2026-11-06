@@ -1,15 +1,10 @@
-import { DolphServiceHandler } from '@dolphjs/dolph/classes';
-import { Dolph } from '@dolphjs/dolph/common';
-import { DService } from '@dolphjs/dolph/decorators';
-import { getDataSource } from '@dolphjs/dolph/packages/typeorm';
+import { DService, getDataSource } from '@dolphjs/dolph';
 import { ImageStorageService } from '../../shared/storage';
 import { PropertyImage } from './property-image.entity';
 
 @DService()
-export class PropertyImageService extends DolphServiceHandler<Dolph> {
-    constructor(private imageStorageService: ImageStorageService) {
-        super('propertyImageService');
-    }
+export class PropertyImageService {
+    constructor(private imageStorageService: ImageStorageService) {}
 
     private get repo() {
         return getDataSource().getRepository(PropertyImage);

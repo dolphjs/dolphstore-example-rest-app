@@ -1,8 +1,4 @@
-import { DolphServiceHandler } from '@dolphjs/dolph/classes';
-import { Dolph } from '@dolphjs/dolph/common';
-import { DService } from '@dolphjs/dolph/decorators';
-import { getDataSource } from '@dolphjs/dolph/packages/typeorm';
-import { hashString } from '@dolphjs/dolph/utilities';
+import { DService, getDataSource, hashString } from '@dolphjs/dolph';
 import { RegisterDto } from './iam.dto';
 import { User } from './user.entity';
 
@@ -12,11 +8,7 @@ import { User } from './user.entity';
  * "Services: upper-level vs lower-level" section.
  */
 @DService()
-export class UserService extends DolphServiceHandler<Dolph> {
-    constructor() {
-        super('userService');
-    }
-
+export class UserService {
     // Getter, not a field initializer — see the caution in
     // docs/techniques/database/typeorm.mdx. @Component constructs every
     // listed service at module-import time, before DolphFactory (and thus

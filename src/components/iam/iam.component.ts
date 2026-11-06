@@ -1,4 +1,4 @@
-import { Component } from '@dolphjs/dolph/decorators';
+import { Component } from '@dolphjs/dolph';
 import { EmailService } from '../../shared/email';
 import { EmailVerificationService } from './email-verification.service';
 import { IamController } from './iam.controller';

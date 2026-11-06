@@ -1,7 +1,4 @@
-import { DolphServiceHandler } from '@dolphjs/dolph/classes';
-import { Dolph } from '@dolphjs/dolph/common';
-import { DService } from '@dolphjs/dolph/decorators';
-import { getDataSource } from '@dolphjs/dolph/packages/typeorm';
+import { DService, getDataSource } from '@dolphjs/dolph';
 import { CreatePropertyDto, SearchPropertiesDto, UpdatePropertyDto } from './property.dto';
 import { ListingStatus } from './property.enums';
 import { Property } from './property.entity';
@@ -19,11 +16,7 @@ export interface PropertySearchResult {
 }
 
 @DService()
-export class PropertyService extends DolphServiceHandler<Dolph> {
-    constructor() {
-        super('propertyService');
-    }
-
+export class PropertyService {
     private get repo() {
         return getDataSource().getRepository(Property);
     }

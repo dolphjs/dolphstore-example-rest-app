@@ -1,16 +1,12 @@
-import { DolphControllerHandler } from '@dolphjs/dolph/classes';
-import { Dolph } from '@dolphjs/dolph/common';
-import { DBody, DHeaders, DPayload, Get, Post, Route, UseMiddleware } from '@dolphjs/dolph/decorators';
+import { DBody, DHeaders, DPayload, Get, Post, Route, UseMiddleware } from '@dolphjs/dolph';
 import { JwtPayload } from '../../shared/interfaces';
 import { LoginDto, RefreshTokenDto, RegisterDto, ResendVerificationDto, VerifyEmailDto } from './iam.dto';
 import { IamService } from './iam.service';
 import { authShield } from './iam.shield';
 
 @Route('auth')
-export class IamController extends DolphControllerHandler<Dolph> {
-    constructor(private iamService: IamService) {
-        super();
-    }
+export class IamController {
+    constructor(private iamService: IamService) {}
 
     @Post('register')
     async register(@DBody(RegisterDto) body: RegisterDto) {

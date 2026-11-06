@@ -1,8 +1,4 @@
-import { DolphServiceHandler } from '@dolphjs/dolph/classes';
-import { Dolph } from '@dolphjs/dolph/common';
-import { DService } from '@dolphjs/dolph/decorators';
-import { getDataSource } from '@dolphjs/dolph/packages/typeorm';
-import { compareHashedString, hashString } from '@dolphjs/dolph/utilities';
+import { DService, getDataSource, compareHashedString, hashString } from '@dolphjs/dolph';
 import { randomInt } from 'crypto';
 import { IsNull } from 'typeorm';
 import { EmailVerificationCode } from './email-verification-code.entity';
@@ -12,11 +8,7 @@ const MAX_ATTEMPTS = 5;
 const RESEND_COOLDOWN_MS = 60 * 1000;
 
 @DService()
-export class EmailVerificationService extends DolphServiceHandler<Dolph> {
-    constructor() {
-        super('emailVerificationService');
-    }
-
+export class EmailVerificationService {
     private get repo() {
         return getDataSource().getRepository(EmailVerificationCode);
     }

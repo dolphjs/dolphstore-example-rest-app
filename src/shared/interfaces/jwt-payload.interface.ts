@@ -1,4 +1,4 @@
-import { IPayload } from '@dolphjs/dolph/common';
+import { IPayload } from '@dolphjs/dolph';
 import { Role } from '../enums';
 
 export interface JwtPayload extends IPayload {

@@ -1,4 +1,4 @@
-import { Component } from '@dolphjs/dolph/decorators';
+import { Component } from '@dolphjs/dolph';
 import { PaymentGatewayService } from '../../shared/payment-gateway';
 import { UserService } from '../iam/user.service';
 import { PropertyService } from '../properties/property.service';

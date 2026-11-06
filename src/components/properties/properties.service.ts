@@ -1,6 +1,4 @@
-import { DolphServiceHandler } from '@dolphjs/dolph/classes';
-import { Dolph, ForbiddenException, NotFoundException } from '@dolphjs/dolph/common';
-import { DService } from '@dolphjs/dolph/decorators';
+import { ForbiddenException, NotFoundException, DService } from '@dolphjs/dolph';
 import { Role } from '../../shared/enums';
 import { Requester } from '../../shared/interfaces';
 import { RatingAggregate, ReviewService } from '../reviews/review.service';
@@ -15,14 +13,12 @@ export type PropertyResponse = Property & RatingAggregate & { isFeatured: boolea
 const isFeatured = (property: Property): boolean => !!property.featuredUntil && property.featuredUntil.getTime() > Date.now();
 
 @DService()
-export class PropertiesService extends DolphServiceHandler<Dolph> {
+export class PropertiesService {
     constructor(
         private propertyService: PropertyService,
         private propertyImageService: PropertyImageService,
         private reviewService: ReviewService,
-    ) {
-        super('propertiesService');
-    }
+    ) {}
 
     async create(agentId: string, dto: CreatePropertyDto): Promise<Property> {
         return this.propertyService.create(agentId, dto);

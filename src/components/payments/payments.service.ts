@@ -1,8 +1,5 @@
-import { DolphServiceHandler } from '@dolphjs/dolph/classes';
-import { Dolph, ForbiddenException, NotFoundException, UnauthorizedException } from '@dolphjs/dolph/common';
-import { DService } from '@dolphjs/dolph/decorators';
+import { ForbiddenException, NotFoundException, UnauthorizedException, DService, logger } from '@dolphjs/dolph';
 import { randomUUID } from 'crypto';
-import { logger } from '@dolphjs/dolph/utilities';
 import { PaginationDto } from '../../shared/dto';
 import { Role } from '../../shared/enums';
 import { Requester } from '../../shared/interfaces';
@@ -16,15 +13,13 @@ import { PaymentService } from './payment.service';
 const FEATURE_DAILY_RATE_KOBO = 50_000;
 
 @DService()
-export class PaymentsService extends DolphServiceHandler<Dolph> {
+export class PaymentsService {
     constructor(
         private paymentService: PaymentService,
         private paymentGatewayService: PaymentGatewayService,
         private propertyService: PropertyService,
         private userService: UserService,
-    ) {
-        super('paymentsService');
-    }
+    ) {}
 
     async initiateFeaturePayment(propertyId: string, requester: Requester, dto: InitiateFeaturePaymentDto) {
         const property = await this.propertyService.findById(propertyId);

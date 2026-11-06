@@ -1,6 +1,4 @@
-import { DolphServiceHandler } from '@dolphjs/dolph/classes';
-import { Dolph } from '@dolphjs/dolph/common';
-import { DService } from '@dolphjs/dolph/decorators';
+import { DService } from '@dolphjs/dolph';
 import { createPaymentGatewayProvider } from './payment-gateway-provider.factory';
 import {
     InitializePaymentParams,
@@ -12,11 +10,10 @@ import {
 } from './payment-gateway-provider.interface';
 
 @DService()
-export class PaymentGatewayService extends DolphServiceHandler<Dolph> {
+export class PaymentGatewayService {
     private provider: PaymentGatewayProvider;
 
     constructor() {
-        super('paymentGatewayService');
         this.provider = createPaymentGatewayProvider();
     }
 

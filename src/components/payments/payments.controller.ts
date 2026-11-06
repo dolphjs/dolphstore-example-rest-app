@@ -1,6 +1,4 @@
-import { DolphControllerHandler } from '@dolphjs/dolph/classes';
-import { BadRequestException, DRequest, Dolph } from '@dolphjs/dolph/common';
-import { DBody, DHeaders, DParam, DPayload, DQuery, DReq, Get, Post, Route, UseMiddleware } from '@dolphjs/dolph/decorators';
+import { BadRequestException, DRequest, DBody, DHeaders, DParam, DPayload, DQuery, DReq, Get, Post, Route, UseMiddleware } from '@dolphjs/dolph';
 import { PaginationDto } from '../../shared/dto';
 import { Role } from '../../shared/enums';
 import { JwtPayload } from '../../shared/interfaces';
@@ -11,10 +9,8 @@ import { PaymentsService } from './payments.service';
 import { PropertyIdParamDto } from '../properties/property.dto';
 
 @Route('')
-export class PaymentsController extends DolphControllerHandler<Dolph> {
-    constructor(private paymentsService: PaymentsService) {
-        super();
-    }
+export class PaymentsController {
+    constructor(private paymentsService: PaymentsService) {}
 
     @UseMiddleware(requireRole(Role.AGENT, Role.ADMIN))
     @UseMiddleware(authShield)

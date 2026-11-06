@@ -1,7 +1,4 @@
-import { DolphServiceHandler } from '@dolphjs/dolph/classes';
-import { Dolph } from '@dolphjs/dolph/common';
-import { DService } from '@dolphjs/dolph/decorators';
-import { getDataSource } from '@dolphjs/dolph/packages/typeorm';
+import { DService, getDataSource } from '@dolphjs/dolph';
 import { PaginationDto } from '../../shared/dto';
 import { Payment } from './payment.entity';
 import { PaymentStatus } from './payment.enums';
@@ -24,11 +21,7 @@ export interface PaymentListResult {
 }
 
 @DService()
-export class PaymentService extends DolphServiceHandler<Dolph> {
-    constructor() {
-        super('paymentService');
-    }
-
+export class PaymentService {
     private get repo() {
         return getDataSource().getRepository(Payment);
     }

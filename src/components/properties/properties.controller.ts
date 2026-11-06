@@ -1,7 +1,4 @@
-import { DolphControllerHandler } from '@dolphjs/dolph/classes';
-import { BadRequestException, DRequest, Dolph } from '@dolphjs/dolph/common';
-import { DBody, DParam, DPayload, DQuery, DReq, Delete, Get, Patch, Post, Route, UseMiddleware } from '@dolphjs/dolph/decorators';
-import { useFileUploader } from '@dolphjs/dolph/packages';
+import { BadRequestException, DRequest, DBody, DParam, DPayload, DQuery, DReq, Delete, Get, Patch, Post, Route, UseMiddleware, useFileUploader } from '@dolphjs/dolph';
 import { authShield } from '../iam/iam.shield';
 import { Role } from '../../shared/enums';
 import { JwtPayload } from '../../shared/interfaces';
@@ -10,10 +7,8 @@ import { CreatePropertyDto, PropertyIdParamDto, PropertyImageIdParamDto, SearchP
 import { PropertiesService } from './properties.service';
 
 @Route('properties')
-export class PropertiesController extends DolphControllerHandler<Dolph> {
-    constructor(private propertiesService: PropertiesService) {
-        super();
-    }
+export class PropertiesController {
+    constructor(private propertiesService: PropertiesService) {}
 
     @Get('')
     async search(@DQuery(SearchPropertiesDto) query: SearchPropertiesDto) {

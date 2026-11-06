@@ -1,7 +1,4 @@
-import { DolphServiceHandler } from '@dolphjs/dolph/classes';
-import { ConflictException, Dolph, ForbiddenException, NotFoundException, UnauthorizedException } from '@dolphjs/dolph/common';
-import { DService } from '@dolphjs/dolph/decorators';
-import { compareHashedString, logger } from '@dolphjs/dolph/utilities';
+import { ConflictException, ForbiddenException, NotFoundException, UnauthorizedException, DService, compareHashedString, logger } from '@dolphjs/dolph';
 import { EmailService } from '../../shared/email';
 import { EmailVerificationService } from './email-verification.service';
 import { LoginDto, RegisterDto } from './iam.dto';
@@ -16,15 +13,13 @@ import { UserService } from './user.service';
  * lower-level" section.
  */
 @DService()
-export class IamService extends DolphServiceHandler<Dolph> {
+export class IamService {
     constructor(
         private userService: UserService,
         private tokenService: TokenService,
         private emailService: EmailService,
         private emailVerificationService: EmailVerificationService,
-    ) {
-        super('iamService');
-    }
+    ) {}
 
     private async issueAndSendVerificationCode(user: User): Promise<void> {
         const code = await this.emailVerificationService.issueCode(user.id);

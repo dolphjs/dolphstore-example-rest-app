@@ -1,15 +1,12 @@
-import { DolphServiceHandler } from '@dolphjs/dolph/classes';
-import { Dolph } from '@dolphjs/dolph/common';
-import { DService } from '@dolphjs/dolph/decorators';
+import { DService } from '@dolphjs/dolph';
 import { createImageStorageProvider } from './image-storage-provider.factory';
 import { ImageStorageProvider, ImageUploadResult } from './image-storage-provider.interface';
 
 @DService()
-export class ImageStorageService extends DolphServiceHandler<Dolph> {
+export class ImageStorageService {
     private provider: ImageStorageProvider;
 
     constructor() {
-        super('imageStorageService');
         this.provider = createImageStorageProvider();
     }
 

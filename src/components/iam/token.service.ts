@@ -1,8 +1,4 @@
-import { DolphServiceHandler } from '@dolphjs/dolph/classes';
-import { Dolph } from '@dolphjs/dolph/common';
-import { DService } from '@dolphjs/dolph/decorators';
-import { getDataSource } from '@dolphjs/dolph/packages/typeorm';
-import { generateJWTwithHMAC, verifyJWTwithHMAC, hashString, compareHashedString } from '@dolphjs/dolph/utilities';
+import { DService, getDataSource, generateJWTwithHMAC, verifyJWTwithHMAC, hashString, compareHashedString } from '@dolphjs/dolph';
 import { randomUUID } from 'crypto';
 import ms from 'ms';
 import { env } from '../../shared/configs';
@@ -27,11 +23,7 @@ const parseTtlMs = (value: string): number => ms(value as ms.StringValue);
  * alongside UserService.
  */
 @DService()
-export class TokenService extends DolphServiceHandler<Dolph> {
-    constructor() {
-        super('tokenService');
-    }
-
+export class TokenService {
     private get repo() {
         return getDataSource().getRepository(RefreshToken);
     }
