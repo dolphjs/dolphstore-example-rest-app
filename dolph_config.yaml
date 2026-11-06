@@ -3,7 +3,6 @@ env: development
 jsonLimit: 2mb
 routing:
   base: '/v1'
-  globalFilter: true
 middlewares:
   cors:
     activate: true
