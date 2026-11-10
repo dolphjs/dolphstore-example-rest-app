@@ -32,11 +32,10 @@ export const envSchema = Joi.object({
     CLOUDINARY_API_KEY: Joi.string().required(),
     CLOUDINARY_API_SECRET: Joi.string().required(),
 
-    PAYSTACK_SECRET_KEY: Joi.string().allow('').optional(),
-    PAYSTACK_PUBLIC_KEY: Joi.string().allow('').optional(),
-    FLUTTERWAVE_SECRET_KEY: Joi.string().allow('').optional(),
-    FLUTTERWAVE_PUBLIC_KEY: Joi.string().allow('').optional(),
-    FLUTTERWAVE_ENCRYPTION_KEY: Joi.string().allow('').optional(),
+    PAYMENT_PROVIDER: Joi.string().valid('paystack').default('paystack'),
+    PAYSTACK_SECRET_KEY: Joi.string()
+        .pattern(/^sk_(test|live)_/)
+        .required(),
 }).unknown(true);
 
 export type EnvVars = {
@@ -60,9 +59,6 @@ export type EnvVars = {
     CLOUDINARY_CLOUD_NAME: string;
     CLOUDINARY_API_KEY: string;
     CLOUDINARY_API_SECRET: string;
-    PAYSTACK_SECRET_KEY?: string;
-    PAYSTACK_PUBLIC_KEY?: string;
-    FLUTTERWAVE_SECRET_KEY?: string;
-    FLUTTERWAVE_PUBLIC_KEY?: string;
-    FLUTTERWAVE_ENCRYPTION_KEY?: string;
+    PAYMENT_PROVIDER: 'paystack';
+    PAYSTACK_SECRET_KEY: string;
 };

@@ -1,7 +1,4 @@
-import { DolphControllerHandler } from '@dolphjs/dolph/classes';
-import { BadRequestException, DRequest, Dolph } from '@dolphjs/dolph/common';
-import { DBody, DParam, DPayload, DQuery, DReq, Delete, Get, Patch, Post, Route, UseMiddleware } from '@dolphjs/dolph/decorators';
-import { useFileUploader } from '@dolphjs/dolph/packages';
+import { BadRequestException, DBody, DParam, DPayload, DQuery, Delete, Get, Patch, Post, Route, UseMiddleware, imageUpload, DFile, UploadedImage } from '@dolphjs/dolph';
 import { authShield } from '../iam/iam.shield';
 import { Role } from '../../shared/enums';
 import { JwtPayload } from '../../shared/interfaces';
@@ -10,10 +7,8 @@ import { CreatePropertyDto, PropertyIdParamDto, PropertyImageIdParamDto, SearchP
 import { PropertiesService } from './properties.service';
 
 @Route('properties')
-export class PropertiesController extends DolphControllerHandler<Dolph> {
-    constructor(private propertiesService: PropertiesService) {
-        super();
-    }
+export class PropertiesController {
+    constructor(private propertiesService: PropertiesService) {}
 
     @Get('')
     async search(@DQuery(SearchPropertiesDto) query: SearchPropertiesDto) {
@@ -58,15 +53,14 @@ export class PropertiesController extends DolphControllerHandler<Dolph> {
         return { message: 'property removed' };
     }
 
-    @UseMiddleware(useFileUploader({ type: 'single', fieldname: 'image' }))
+    @UseMiddleware(imageUpload({ resize: { width: 2000 }, format: 'webp', quality: 80 }))
     @UseMiddleware(requireRole(Role.AGENT, Role.ADMIN))
     @UseMiddleware(authShield)
     @Post(':id/images')
-    async addImage(@DParam(PropertyIdParamDto) params: PropertyIdParamDto, @DPayload() payload: JwtPayload, @DReq() req: DRequest) {
-        const buffer = req.file?.buffer;
-        if (!buffer) throw new BadRequestException('an "image" file is required');
+    async addImage(@DParam(PropertyIdParamDto) params: PropertyIdParamDto, @DPayload() payload: JwtPayload, @DFile() image?: UploadedImage) {
+        if (!image?.buffer) throw new BadRequestException('an "image" file is required');
 
-        return this.propertiesService.addImage(params.id, { userId: payload.sub, role: payload.info.role }, buffer);
+        return this.propertiesService.addImage(params.id, { userId: payload.sub, role: payload.info.role }, image.buffer);
     }
 
     @UseMiddleware(requireRole(Role.AGENT, Role.ADMIN))

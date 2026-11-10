@@ -1,7 +1,4 @@
-import { DolphServiceHandler } from '@dolphjs/dolph/classes';
-import { Dolph } from '@dolphjs/dolph/common';
-import { DService } from '@dolphjs/dolph/decorators';
-import { getDataSource } from '@dolphjs/dolph/packages/typeorm';
+import { DService, getDataSource } from '@dolphjs/dolph';
 import { PaginationDto } from '../../shared/dto';
 import { CreateReviewDto, UpdateReviewDto } from './review.dto';
 import { Review } from './review.entity';
@@ -19,11 +16,7 @@ export interface ReviewListResult {
 }
 
 @DService()
-export class ReviewService extends DolphServiceHandler<Dolph> {
-    constructor() {
-        super('reviewService');
-    }
-
+export class ReviewService {
     private get repo() {
         return getDataSource().getRepository(Review);
     }

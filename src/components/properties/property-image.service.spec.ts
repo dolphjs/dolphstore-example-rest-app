@@ -66,6 +66,42 @@ describe('PropertyImageService', () => {
         expect(second.position).toBe(1);
     });
 
+    it('gives concurrent uploads different positions', async () => {
+        const images = await Promise.all(
+            [1, 2, 3].map((index) => propertyImageService.upload(propertyId, Buffer.from(`bytes-${index}`))),
+        );
+        const positions = images.map((image) => image.position);
+
+        expect(new Set(positions).size).toBe(3);
+    });
+
+    it('never reuses a position after an image is removed', async () => {
+        const first = await propertyImageService.upload(propertyId, Buffer.from('first'));
+        const second = await propertyImageService.upload(propertyId, Buffer.from('second'));
+
+        await propertyImageService.remove(first.id);
+
+        const third = await propertyImageService.upload(propertyId, Buffer.from('third'));
+
+        expect(third.position).toBe(second.position + 1);
+    });
+
+    it('removes the stored image when the row cannot be saved', async () => {
+        await expect(
+            propertyImageService.upload('00000000-0000-0000-0000-000000000000', Buffer.from('orphan')),
+        ).rejects.toThrow();
+
+        expect(imageStorage.remove).toHaveBeenCalledWith('dolphstore/properties/pub1');
+    });
+
+    it('keeps the save error when removing the stored image also fails', async () => {
+        imageStorage.remove.mockRejectedValue(new Error('provider is down'));
+
+        await expect(
+            propertyImageService.upload('00000000-0000-0000-0000-000000000000', Buffer.from('orphan')),
+        ).rejects.not.toThrow('provider is down');
+    });
+
     it('remove() deletes from storage and from the database', async () => {
         const image = await propertyImageService.upload(propertyId, Buffer.from('to-remove'));
 

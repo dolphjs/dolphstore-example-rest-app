@@ -1,6 +1,7 @@
 import { createTestingApp, TestingApp } from '@dolphjs/testing';
 import { DataSource } from 'typeorm';
 import request from 'supertest';
+import sharp from 'sharp';
 import { seedSqliteDataSource } from '../../../tests/utils/sqlite-datasource';
 import { EmailService } from '../../shared/email';
 import { ImageStorageService } from '../../shared/storage';
@@ -10,6 +11,8 @@ import { User } from '../iam/user.entity';
 import { Review } from '../reviews/review.entity';
 import { PropertyImage } from './property-image.entity';
 import { Property } from './property.entity';
+
+const samplePng = () => sharp({ create: { width: 30, height: 20, channels: 3, background: 'teal' } }).png().toBuffer();
 
 describe('PropertiesController (e2e)', () => {
     let app: TestingApp;
@@ -165,7 +168,7 @@ describe('PropertiesController (e2e)', () => {
         const uploadRes = await request(app.engine)
             .post(`/v1/properties/${created.body.data.id}/images`)
             .set('Authorization', `Bearer ${agent.accessToken}`)
-            .attach('image', Buffer.from('fake-png-bytes'), 'photo.png');
+            .attach('image', await samplePng(), 'photo.png');
 
         expect(uploadRes.status).toBe(200);
         expect(uploadRes.body.data.url).toBe('https://cdn.example.com/mock.png');
@@ -179,6 +182,49 @@ describe('PropertiesController (e2e)', () => {
 
         expect(removeRes.status).toBe(200);
         expect(mockImageStorage.remove).toHaveBeenCalledWith('mock-public-id');
+    });
+
+    it('rejects a file that is only named like an image', async () => {
+        const agent = await registerVerifiedUser('agent');
+        const created = await request(app.engine)
+            .post('/v1/properties')
+            .set('Authorization', `Bearer ${agent.accessToken}`)
+            .send(propertyPayload);
+        mockImageStorage.upload.mockClear();
+
+        const res = await request(app.engine)
+            .post(`/v1/properties/${created.body.data.id}/images`)
+            .set('Authorization', `Bearer ${agent.accessToken}`)
+            .attach('image', Buffer.from('fake-png-bytes'), 'photo.png');
+
+        expect(res.status).toBe(415);
+        expect(mockImageStorage.upload).not.toHaveBeenCalled();
+    });
+
+    it('stores uploads as webp with their metadata removed', async () => {
+        const agent = await registerVerifiedUser('agent');
+        const created = await request(app.engine)
+            .post('/v1/properties')
+            .set('Authorization', `Bearer ${agent.accessToken}`)
+            .send(propertyPayload);
+        mockImageStorage.upload.mockClear();
+
+        const photo = await sharp({ create: { width: 30, height: 20, channels: 3, background: 'teal' } })
+            .withExif({ IFD0: { Copyright: 'agent' } })
+            .jpeg()
+            .toBuffer();
+
+        const res = await request(app.engine)
+            .post(`/v1/properties/${created.body.data.id}/images`)
+            .set('Authorization', `Bearer ${agent.accessToken}`)
+            .attach('image', photo, 'photo.jpg');
+
+        expect(res.status).toBe(200);
+
+        const stored = await sharp(mockImageStorage.upload.mock.calls[0][0]).metadata();
+
+        expect(stored.format).toBe('webp');
+        expect(stored.exif).toBeUndefined();
     });
 
     it('deleting a property removes it from the public list', async () => {

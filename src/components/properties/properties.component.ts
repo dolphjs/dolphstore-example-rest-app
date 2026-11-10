@@ -1,4 +1,4 @@
-import { Component } from '@dolphjs/dolph/decorators';
+import { Component } from '@dolphjs/dolph';
 import { ImageStorageService } from '../../shared/storage';
 import { ReviewService } from '../reviews/review.service';
 import { PropertyImageService } from './property-image.service';

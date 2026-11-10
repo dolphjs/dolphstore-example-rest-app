@@ -1,6 +1,4 @@
-import { DolphServiceHandler } from '@dolphjs/dolph/classes';
-import { ConflictException, Dolph, ForbiddenException, NotFoundException } from '@dolphjs/dolph/common';
-import { DService } from '@dolphjs/dolph/decorators';
+import { ConflictException, ForbiddenException, NotFoundException, DService } from '@dolphjs/dolph';
 import { PaginationDto } from '../../shared/dto';
 import { Role } from '../../shared/enums';
 import { Requester } from '../../shared/interfaces';
@@ -11,13 +9,11 @@ import { Review } from './review.entity';
 import { ReviewService } from './review.service';
 
 @DService()
-export class ReviewsService extends DolphServiceHandler<Dolph> {
+export class ReviewsService {
     constructor(
         private reviewService: ReviewService,
         private propertyService: PropertyService,
-    ) {
-        super('reviewsService');
-    }
+    ) {}
 
     async create(propertyId: string, requester: Requester, dto: CreateReviewDto): Promise<Review> {
         const property = await this.findPublishedProperty(propertyId);

@@ -1,7 +1,4 @@
-import { DolphServiceHandler } from '@dolphjs/dolph/classes';
-import { Dolph } from '@dolphjs/dolph/common';
-import { DService } from '@dolphjs/dolph/decorators';
-import { getDataSource } from '@dolphjs/dolph/packages/typeorm';
+import { DService, getDataSource } from '@dolphjs/dolph';
 import { CreatePropertyDto, SearchPropertiesDto, UpdatePropertyDto } from './property.dto';
 import { ListingStatus } from './property.enums';
 import { Property } from './property.entity';
@@ -19,11 +16,7 @@ export interface PropertySearchResult {
 }
 
 @DService()
-export class PropertyService extends DolphServiceHandler<Dolph> {
-    constructor() {
-        super('propertyService');
-    }
-
+export class PropertyService {
     private get repo() {
         return getDataSource().getRepository(Property);
     }
@@ -50,7 +43,10 @@ export class PropertyService extends DolphServiceHandler<Dolph> {
         if (query.maxPrice !== undefined) qb.andWhere('property.price <= :maxPrice', { maxPrice: query.maxPrice });
         if (query.minBedrooms !== undefined) qb.andWhere('property.bedrooms >= :minBedrooms', { minBedrooms: query.minBedrooms });
 
-        qb.orderBy('property.createdAt', query.order)
+        qb.addSelect('CASE WHEN property.featuredUntil IS NOT NULL AND property.featuredUntil > :now THEN 0 ELSE 1 END', 'featured_rank')
+            .setParameter('now', new Date())
+            .orderBy('featured_rank', 'ASC')
+            .addOrderBy('property.createdAt', query.order)
             .skip((query.page - 1) * query.limit)
             .take(query.limit);
 
@@ -61,6 +57,10 @@ export class PropertyService extends DolphServiceHandler<Dolph> {
     async update(id: string, dto: UpdatePropertyDto): Promise<Property> {
         await this.repo.update({ id }, dto);
         return (await this.findById(id))!;
+    }
+
+    async markFeatured(id: string, until: Date): Promise<void> {
+        await this.repo.update({ id }, { featuredUntil: until });
     }
 
     async softDelete(id: string): Promise<void> {

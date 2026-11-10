@@ -1,4 +1,4 @@
-import { DNextFunc, DRequest, DResponse, ForbiddenException } from '@dolphjs/dolph/common';
+import { DNextFunc, DRequest, DResponse, ForbiddenException } from '@dolphjs/dolph';
 import { Role } from '../enums';
 import { JwtPayload } from '../interfaces';
 

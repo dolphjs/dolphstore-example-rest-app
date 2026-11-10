@@ -208,6 +208,26 @@ No separate "must be verified" check needed on top of `authShield` — `login()`
 
 Same swappable-provider shape as email: `ImageStorageProvider` (`upload(buffer, folder)`, `remove(publicId)`) is the interface application code depends on; `CloudinaryImageStorageProvider` is the only implementation, selected via `IMAGE_STORAGE_PROVIDER` in `image-storage-provider.factory.ts`. Uploads never touch disk — DolphJS's built-in `useFileUploader` middleware defaults to `memoryStorage()`, so `req.file.buffer` goes straight to Cloudinary's `upload_stream`.
 
+## Payments (`src/components/payments`, gateway in `src/shared/payment-gateway`)
+
+The only thing a payment can currently pay for is featuring a listing. `POST /v1/properties/:id/feature` (owning agent or admin) creates a `PENDING` `Payment` row and returns a hosted checkout URL from the gateway; the property is only marked featured once the gateway confirms the charge via webhook — never at initiation time.
+
+| Method | Path                          | Auth required          | Notes                                                    |
+| ------ | ------------------------------ | ------------------------ | ----------------------------------------------------------- |
+| POST   | `/properties/:id/feature`      | Bearer, owner or admin   | Body: `{ durationDays }` (1-90). Amount = `durationDays x FEATURE_DAILY_RATE_KOBO` |
+| GET    | `/payments/mine`               | Bearer                  | Paginated, scoped to the caller's own payments             |
+| GET    | `/payments/:reference`         | Bearer, owner or admin  |                                                              |
+| POST   | `/payments/:id/refund`         | Bearer (admin)          | Only a `PAID` payment can be refunded; un-features the property |
+| POST   | `/payments/webhooks/paystack`  | —                       | Paystack calls this directly, not a browser — see below     |
+
+**Swappable gateway, same shape as email/media.** Application code depends on `PaymentGatewayService`, which wraps a `PaymentGatewayProvider` interface (`initialize`, `verify`, `refund`, `verifyWebhookSignature`). `PaystackPaymentGatewayProvider` is the only implementation today; swapping providers means writing a new class against the same interface and pointing `payment-gateway-provider.factory.ts` at it via `PAYMENT_PROVIDER` — nothing above `PaymentGatewayService` changes. Flutterwave was evaluated and deliberately not built: its current v4 API requires an OAuth2 token exchange plus client-side card-field encryption before a charge ever reaches a backend, which doesn't fit a backend-only integration the way Paystack's static-Bearer-key REST API does.
+
+`FEATURE_DAILY_RATE_KOBO` is a hardcoded constant in `payments.service.ts`, not an env var — same reasoning as the email-verification code TTL/attempt-limit constants in the IAM module: it's a business rule, not infrastructure config, so it doesn't belong in `.env`.
+
+**Webhook handling — never trust the payload, verify twice.** `PaymentsService#handleWebhook` first checks the `x-paystack-signature` header (`HMAC-SHA512` of the *raw* request body, keyed with the Paystack secret) before looking at the body at all. Once the signature passes, it still doesn't trust the payload's own `status` field — it re-calls `PaymentGatewayService#verify(reference)`, a fresh API call back to Paystack, and acts on that authoritative response instead. It's also idempotent: a payment that isn't still `PENDING` short-circuits immediately, since providers may redeliver the same event more than once.
+
+HMAC signature verification needs the exact original request bytes; `JSON.stringify(req.body)` after Express has already parsed and reserialized it is not guaranteed to reproduce them (whitespace/key-order differences would silently break real signatures). DolphJS didn't originally expose the raw body to consuming apps, so `req.rawBody: Buffer` (captured via `express.json()`'s own `verify` callback) was added upstream in the framework itself and shipped in `@dolphjs/dolph@2.0.3` — `payments.controller.ts`'s webhook handler reads it directly, no cast needed.
+
 ## Roadmap
 
 - [x] Foundation: env validation, DTO validation convention, TypeORM/Postgres wiring, shared entity/enum/interface scaffolding
@@ -215,4 +235,4 @@ Same swappable-provider shape as email: `ImageStorageProvider` (`upload(buffer, 
 - [x] Email: MJML + Handlebars templates, Sendbyte provider behind a swappable interface
 - [x] Properties/Listings: CRUD, Cloudinary-backed image upload, search & filtering
 - [x] Reviews/Ratings: per-property reviews, computed rating rollup on Property responses
-- [ ] Payments: Paystack + Flutterwave
+- [x] Payments: Paystack behind a swappable gateway interface, featured-listing flow, webhook-verified confirmation

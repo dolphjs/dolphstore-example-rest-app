@@ -1,6 +1,4 @@
-import { DolphControllerHandler } from '@dolphjs/dolph/classes';
-import { Dolph } from '@dolphjs/dolph/common';
-import { DBody, DParam, DPayload, DQuery, Delete, Get, Patch, Post, Route, UseMiddleware } from '@dolphjs/dolph/decorators';
+import { DBody, DParam, DPayload, DQuery, Delete, Get, Patch, Post, Route, UseMiddleware } from '@dolphjs/dolph';
 import { PaginationDto } from '../../shared/dto';
 import { JwtPayload } from '../../shared/interfaces';
 import { authShield } from '../iam/iam.shield';
@@ -8,10 +6,8 @@ import { CreateReviewDto, PropertyReviewParamDto, ReviewIdParamDto, UpdateReview
 import { ReviewsService } from './reviews.service';
 
 @Route('')
-export class ReviewsController extends DolphControllerHandler<Dolph> {
-    constructor(private reviewsService: ReviewsService) {
-        super();
-    }
+export class ReviewsController {
+    constructor(private reviewsService: ReviewsService) {}
 
     @Get('properties/:propertyId/reviews')
     async list(@DParam(PropertyReviewParamDto) params: PropertyReviewParamDto, @DQuery(PaginationDto) query: PaginationDto) {

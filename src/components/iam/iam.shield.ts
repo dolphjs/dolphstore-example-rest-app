@@ -1,5 +1,4 @@
-import { DNextFunc, DRequest, DResponse, UnauthorizedException } from '@dolphjs/dolph/common';
-import { verifyJWTwithHMAC } from '@dolphjs/dolph/utilities';
+import { DNextFunc, DRequest, DResponse, UnauthorizedException, verifyJWTwithHMAC } from '@dolphjs/dolph';
 import { env } from '../../shared/configs';
 import { JwtPayload } from '../../shared/interfaces';
 
